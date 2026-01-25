@@ -14,7 +14,7 @@ This happens because Google Cloud Console doesn't have your production callback 
    - Make sure you're in the correct project
 
 2. **Find your OAuth 2.0 Client:**
-   - Look for the client with ID: `825835127905-e91eav3k8p0o7bhsgju27pc7dr15s817.apps.googleusercontent.com`
+   - Look for your OAuth 2.0 Client ID (starts with numbers and ends with `.apps.googleusercontent.com`)
    - Click on it to edit
 
 3. **Add Production URLs:**

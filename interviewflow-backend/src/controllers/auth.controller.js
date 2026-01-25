@@ -55,63 +55,42 @@ exports.sendOTP = async (req, res) => {
             expiresAt
         });
 
-        // Send OTP via email
-        try {
-            await emailService.sendOTP(email, otp);
-            res.status(200).json({
-                message: 'OTP sent successfully to your email',
-                email: email // Return email for frontend confirmation
-            });
-        } catch (emailError) {
-            console.error('Email sending failed:', emailError);
+        // Return response immediately (don't wait for email)
+        res.status(200).json({
+            message: 'OTP sent successfully to your email',
+            email: email // Return email for frontend confirmation
+        });
+
+        // Send OTP via email asynchronously (fire and forget)
+        // This prevents blocking the response while email is being sent
+        emailService.sendOTP(email, otp).then(() => {
+            console.log(`✓ Registration OTP sent successfully to ${email}`);
+        }).catch((emailError) => {
+            console.error('✗ Registration OTP email sending failed (async):', emailError);
             
-            // Check if it's a rate limit error
-            const isRateLimit = emailError.message?.includes('rate limit') || 
-                               emailError.message?.includes('rate limited');
+            // Log error but don't fail the request since OTP is already saved
+            // User can request a new OTP if email doesn't arrive
             
-            if (isRateLimit) {
-                // Return rate limit error to user
-                return res.status(429).json({
-                    message: emailError.message || 'Email service is temporarily unavailable. Please try again in a few moments.',
-                    email: email,
-                    retryAfter: 30 // Suggest retry after 30 seconds
-                });
+            // In dev mode, log OTP for testing
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('⚠ OTP for testing (email failed):', otp);
             }
             
-            // Check if it's a bad credentials error (Gmail App Password issue)
+            // Log specific error types for debugging
+            const isRateLimit = emailError.message?.includes('rate limit') || 
+                               emailError.message?.includes('rate limited');
             const isBadCredentials = emailError.message?.includes('BadCredentials') || 
                                     emailError.message?.includes('Username and Password not accepted') ||
                                     emailError.message?.includes('Email authentication failed');
             
-            if (isBadCredentials) {
-                // Return detailed error about App Password
-                return res.status(401).json({
-                    message: emailError.message || 'Gmail authentication failed. Please use an App Password instead of your regular password.',
-                    email: email,
-                    errorType: 'bad_credentials',
-                    helpUrl: 'https://myaccount.google.com/apppasswords'
-                });
-            }
-            
-            // For other email errors, still allow registration in dev mode
-            // In production, you might want to fail here
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('⚠ Email sending failed, but allowing registration in dev mode');
-                console.warn('⚠ OTP for testing:', otp);
-                res.status(200).json({
-                    message: 'OTP generated. Check your email for verification code. (Email service error in dev mode)',
-                    email: email,
-                    otp: otp, // Show OTP in dev mode for testing
-                    warning: 'Email service not working. Using OTP for testing.'
-                });
+            if (isRateLimit) {
+                console.warn('⚠ Email rate limited - user can retry after delay');
+            } else if (isBadCredentials) {
+                console.error('⚠ Email authentication failed - check SMTP credentials in Railway');
             } else {
-                // In production, return error
-                res.status(500).json({
-                    message: emailError.message || 'Failed to send verification email. Please check your email configuration or try again later.',
-                    email: email
-                });
+                console.error('⚠ Email sending failed:', emailError.message);
             }
-        }
+        });
     } catch (error) {
         console.error('Send OTP error:', error);
         res.status(500).json({ message: error.message || 'Failed to send OTP' });
