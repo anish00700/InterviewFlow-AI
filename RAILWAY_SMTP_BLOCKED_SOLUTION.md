@@ -32,7 +32,16 @@ Railway is blocking outbound SMTP connections to Gmail, causing connection timeo
    - Permissions: "Full Access" (or just "Mail Send")
    - Copy the API key
 
-3. **Update Railway Variables:**
+3. **Verify Sender Email in SendGrid:**
+   - Go to: https://app.sendgrid.com/settings/sender_auth/senders/new
+   - Click "Create New Sender"
+   - Enter your email address (e.g., `your-email@gmail.com`)
+   - Fill in the required fields (Name, Email, Company, etc.)
+   - Click "Create"
+   - **Check your email inbox** and click the verification link
+   - Wait for verification to complete (usually instant)
+
+4. **Update Railway Variables:**
    ```
    SMTP_HOST=smtp.sendgrid.net
    SMTP_PORT=587
@@ -44,10 +53,15 @@ Railway is blocking outbound SMTP connections to Gmail, causing connection timeo
    
    **Important:**
    - `SMTP_USER` must be the literal string `apikey`
-   - `SMTP_PASS` is your SendGrid API key
-   - `SMTP_FROM_EMAIL` should be a verified sender email in SendGrid (optional but recommended)
+   - `SMTP_PASS` is your SendGrid API key (starts with `SG.`)
+   - `SMTP_FROM_EMAIL` **MUST** be set to a verified sender email in SendGrid (required!)
+   - The email in `SMTP_FROM_EMAIL` must match exactly what you verified in SendGrid
 
-4. **Railway will auto-redeploy** - emails should work immediately
+5. **Railway will auto-redeploy** - emails should work immediately
+
+**⚠️ Common Error: "The from address does not match a verified Sender Identity"**
+- This means `SMTP_FROM_EMAIL` is not set or the email is not verified in SendGrid
+- Solution: Verify your sender email in SendGrid first, then set `SMTP_FROM_EMAIL` in Railway
 
 **Benefits:**
 - ✅ No connection timeouts

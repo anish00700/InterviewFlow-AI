@@ -410,7 +410,12 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
      */
     async sendOTPViaSendGridAPI(email, otp) {
         try {
-            const senderEmail = process.env.SMTP_FROM_EMAIL || 'noreply@interviewflow.ai';
+            // SendGrid requires a verified sender email
+            if (!process.env.SMTP_FROM_EMAIL) {
+                throw new Error('SMTP_FROM_EMAIL is not set. Please set it in Railway variables with a verified SendGrid sender email. See: https://sendgrid.com/docs/for-developers/sending-email/sender-identity/');
+            }
+            const senderEmail = process.env.SMTP_FROM_EMAIL;
+            console.log(`📧 Using verified sender email: ${senderEmail}`);
             
             const msg = {
                 to: email,
@@ -452,8 +457,15 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
             return { success: true, messageId: 'sendgrid-api' };
         } catch (error) {
             console.error('✗ SendGrid API error:', error);
-            if (error.response) {
+            if (error.response && error.response.body) {
                 console.error('✗ SendGrid response:', error.response.body);
+                // Check for sender identity errors
+                if (error.response.body.errors && Array.isArray(error.response.body.errors)) {
+                    const senderError = error.response.body.errors.find(e => e.field === 'from');
+                    if (senderError) {
+                        throw new Error(`SendGrid sender verification error: ${senderError.message}. Please verify your sender email in SendGrid: https://app.sendgrid.com/settings/sender_auth/senders/new`);
+                    }
+                }
             }
             throw new Error(`SendGrid API error: ${error.message}`);
         }
@@ -464,7 +476,12 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
      */
     async sendPasswordResetViaSendGridAPI(email, resetToken) {
         try {
-            const senderEmail = process.env.SMTP_FROM_EMAIL || 'noreply@interviewflow.ai';
+            // SendGrid requires a verified sender email
+            if (!process.env.SMTP_FROM_EMAIL) {
+                throw new Error('SMTP_FROM_EMAIL is not set. Please set it in Railway variables with a verified SendGrid sender email. See: https://sendgrid.com/docs/for-developers/sending-email/sender-identity/');
+            }
+            const senderEmail = process.env.SMTP_FROM_EMAIL;
+            console.log(`📧 Using verified sender email: ${senderEmail}`);
             const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
             const msg = {
@@ -509,8 +526,15 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
             return { success: true, messageId: 'sendgrid-api' };
         } catch (error) {
             console.error('✗ SendGrid API error:', error);
-            if (error.response) {
+            if (error.response && error.response.body) {
                 console.error('✗ SendGrid response:', error.response.body);
+                // Check for sender identity errors
+                if (error.response.body.errors && Array.isArray(error.response.body.errors)) {
+                    const senderError = error.response.body.errors.find(e => e.field === 'from');
+                    if (senderError) {
+                        throw new Error(`SendGrid sender verification error: ${senderError.message}. Please verify your sender email in SendGrid: https://app.sendgrid.com/settings/sender_auth/senders/new`);
+                    }
+                }
             }
             throw new Error(`SendGrid API error: ${error.message}`);
         }
