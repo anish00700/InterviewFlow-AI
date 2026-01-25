@@ -143,16 +143,27 @@ GOOGLE_CALLBACK_URL=http://localhost:5001/api/auth/google/callback
 
 When deploying to production:
 
-1. Update callback URL in Google OAuth settings:
-   - Add your production callback URL in Google Cloud Console
+1. **Update Google Cloud Console:**
+   - Go to: https://console.cloud.google.com/apis/credentials
+   - Edit your OAuth 2.0 Client
+   - **Authorized JavaScript origins:** Add `https://your-backend-domain.com`
+   - **Authorized redirect URIs:** Add `https://your-backend-domain.com/api/auth/google/callback`
+   - Click "Save"
 
-2. Update `.env`:
+2. **Update Railway Environment Variables:**
    ```env
    FRONTEND_URL=https://your-frontend-domain.com
    GOOGLE_CALLBACK_URL=https://your-backend-domain.com/api/auth/google/callback
    ```
 
-3. Make sure your backend is accessible from the internet (for OAuth callbacks)
+3. **For your current deployment:**
+   - Frontend: `https://interview-flow-ai-oewj.vercel.app`
+   - Backend: `https://interviewflow-ai-production.up.railway.app`
+   - Callback: `https://interviewflow-ai-production.up.railway.app/api/auth/google/callback`
+
+4. **Important:** The redirect URI in Google Cloud Console must match **exactly** (including `https://`, no trailing slashes)
+
+5. Make sure your backend is accessible from the internet (for OAuth callbacks)
 
 ---
 

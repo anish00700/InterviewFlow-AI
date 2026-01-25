@@ -367,28 +367,30 @@ exports.forgotPassword = async (req, res) => {
         // Create reset token
         const resetToken = await PasswordReset.createResetToken(email.trim().toLowerCase());
 
-        // Send reset email
-        try {
-            await emailService.sendPasswordResetEmail(email.trim().toLowerCase(), resetToken.token);
-        } catch (emailError) {
-            // Delete the token if email fails
-            await PasswordReset.deleteOne({ _id: resetToken._id });
-            
-            // In development, log the token for testing
-            if (process.env.NODE_ENV === 'development') {
-                console.log('DEV MODE: Password reset token:', resetToken.token);
-                console.log('DEV MODE: Reset URL:', `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken.token}`);
-            }
-            
-            return res.status(500).json({
-                message: 'Failed to send password reset email. Please try again later.',
-                error: process.env.NODE_ENV === 'development' ? emailError.message : undefined
-            });
-        }
-
+        // Return response immediately (don't wait for email)
         res.status(200).json({
             message: 'If an account exists with this email, a password reset link has been sent.'
         });
+
+        // Send reset email asynchronously (fire and forget)
+        // This prevents blocking the response while email is being sent
+        emailService.sendPasswordResetEmail(email.trim().toLowerCase(), resetToken.token)
+            .then(() => {
+                console.log(`✓ Password reset email sent successfully to ${email.trim().toLowerCase()}`);
+            })
+            .catch((emailError) => {
+                console.error('✗ Password reset email sending failed (async):', emailError);
+                // Delete the token if email fails (but don't block the response)
+                PasswordReset.deleteOne({ _id: resetToken._id }).catch(err => {
+                    console.error('Failed to delete reset token:', err);
+                });
+                
+                // In development, log the token for testing
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn('⚠ Password reset token (email failed):', resetToken.token);
+                    console.warn('⚠ Reset URL:', `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken.token}`);
+                }
+            });
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ message: error.message || 'Server error' });
