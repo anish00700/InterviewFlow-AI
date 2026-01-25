@@ -87,4 +87,6 @@ export function debounce(fn, delay) {
 // API base URL - use environment variable or default to relative path
 // In production, if VITE_API_URL is not set, use empty string (relative paths)
 // This allows the app to work even if backend URL is not configured initially
-export const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+// Remove trailing slash to prevent double slashes in URLs
+const rawUrl = import.meta.env.VITE_API_URL || ''
+export const API_BASE_URL = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl
