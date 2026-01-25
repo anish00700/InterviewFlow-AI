@@ -509,59 +509,25 @@ exports.sendEmailUpdateOTP = async (req, res) => {
             userId: userId.toString() // Store userId to verify this is for email update
         });
 
-        // Send OTP via email
-        try {
-            await emailService.sendOTP(newEmail, otp);
-            res.status(200).json({
-                message: 'Verification code sent to your new email address',
-                email: newEmail
-            });
-        } catch (emailError) {
-            console.error('Email sending failed:', emailError);
-            
-            // Check if it's a rate limit error
-            const isRateLimit = emailError.message?.includes('rate limit') || 
-                               emailError.message?.includes('rate limited');
-            
-            if (isRateLimit) {
-                return res.status(429).json({
-                    message: emailError.message || 'Email service is temporarily unavailable. Please try again in a few moments.',
-                    email: newEmail,
-                    retryAfter: 30
-                });
-            }
-            
-            // Check if it's a bad credentials error
-            const isBadCredentials = emailError.message?.includes('BadCredentials') || 
-                                    emailError.message?.includes('Username and Password not accepted') ||
-                                    emailError.message?.includes('Email authentication failed');
-            
-            if (isBadCredentials) {
-                return res.status(401).json({
-                    message: emailError.message || 'Gmail authentication failed. Please use an App Password instead of your regular password.',
-                    email: newEmail,
-                    errorType: 'bad_credentials',
-                    helpUrl: 'https://myaccount.google.com/apppasswords'
-                });
-            }
-            
-            // In dev mode, show OTP for testing
+        // Return response immediately (don't wait for email)
+        res.status(200).json({
+            message: 'Verification code sent to your new email address',
+            email: newEmail
+        });
+
+        // Send OTP via email asynchronously (fire and forget)
+        // This prevents blocking the response while email is being sent
+        emailService.sendOTP(newEmail, otp).then(() => {
+            console.log(`✓ Email update OTP sent successfully to ${newEmail}`);
+        }).catch((emailError) => {
+            console.error('✗ Email sending failed (async):', emailError);
+            // Log error but don't fail the request since OTP is already saved
+            // User can request a new OTP if email doesn't arrive
+            // In dev mode, log OTP for testing
             if (process.env.NODE_ENV === 'development') {
-                console.warn('⚠ Email sending failed, but allowing in dev mode');
-                console.warn('⚠ OTP for testing:', otp);
-                res.status(200).json({
-                    message: 'Verification code generated. Check your email for verification code. (Email service error in dev mode)',
-                    email: newEmail,
-                    otp: otp, // Show OTP in dev mode for testing
-                    warning: 'Email service not working. Using OTP for testing.'
-                });
-            } else {
-                res.status(500).json({
-                    message: emailError.message || 'Failed to send verification email. Please check your email configuration or try again later.',
-                    email: newEmail
-                });
+                console.warn('⚠ OTP for testing (email failed):', otp);
             }
-        }
+        });
     } catch (error) {
         console.error('Send email update OTP error:', error);
         res.status(500).json({ message: error.message || 'Server error' });

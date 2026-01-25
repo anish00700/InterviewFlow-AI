@@ -197,6 +197,7 @@
 }
 
 /* PDF Export Styles - Critical for proper PDF rendering */
+/* PDF Export Styles */
 .pdf-exporting * {
   animation: none !important;
   transition: none !important;
@@ -213,4 +214,16 @@
 
 .pdf-exporting body {
   background: #ffffff !important;
+}
+
+.pdf-exporting .pdf-root {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.pdf-exporting .break-inside-avoid {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }

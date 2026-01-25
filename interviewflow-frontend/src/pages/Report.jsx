@@ -89,18 +89,22 @@ export function Report() {
         })
       ]);
 
-      // Wait for fonts to load
+      // Wait for fonts and images to load
       await document.fonts.ready;
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Get the element
       const element = reportRef.current;
       
+      // Scroll element into view to ensure it's rendered
+      element.scrollIntoView({ behavior: 'instant', block: 'start' });
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       // Add PDF exporting class to body
       document.body.classList.add('pdf-exporting');
       
-      // Wait a bit for styles to apply
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for styles to apply
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       // Hide action buttons
       const actionSection = element.querySelector('[data-pdf-exclude]');
@@ -108,15 +112,37 @@ export function Report() {
         actionSection.style.display = 'none';
       }
 
-      // Capture with simplified options
+      // Get actual element dimensions
+      const rect = element.getBoundingClientRect();
+      const elementHeight = element.scrollHeight;
+      const elementWidth = element.scrollWidth;
+
+      // Capture with improved options
       const canvas = await html2canvas(element, {
         scale: 2,
         backgroundColor: '#ffffff',
         useCORS: true,
+        logging: false,
+        width: elementWidth,
+        height: elementHeight,
+        windowWidth: elementWidth,
+        windowHeight: elementHeight,
+        x: 0,
+        y: 0,
         scrollX: 0,
-        scrollY: -window.scrollY,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          // Ensure all styles are applied in the cloned document
+          const clonedElement = clonedDoc.querySelector('.pdf-root');
+          if (clonedElement) {
+            clonedElement.style.width = `${elementWidth}px`;
+            clonedElement.style.height = 'auto';
+            clonedElement.style.overflow = 'visible';
+            // Hide any scrollbars
+            clonedElement.style.overflowX = 'hidden';
+            clonedElement.style.overflowY = 'hidden';
+          }
+        }
       });
 
       // Restore action buttons
@@ -132,26 +158,70 @@ export function Report() {
         throw new Error('Failed to capture report content. The canvas is empty.');
       }
 
-      const imgData = canvas.toDataURL('image/png');
+      // Check if canvas actually has content (not just white/transparent)
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, Math.min(canvas.width, 100), Math.min(canvas.height, 100));
+      const hasContent = imageData.data.some((channel, index) => {
+        // Check every 4th value (alpha channel) or any non-white pixel
+        return index % 4 === 3 ? channel > 0 : channel < 250;
+      });
+
+      if (!hasContent) {
+        throw new Error('Failed to capture report content. The captured image appears to be blank.');
+      }
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const pdf = new jsPDF('p', 'mm', 'a4');
 
+      // A4 dimensions in mm
       const pageWidth = 210;
       const pageHeight = 297;
+      const margin = 5; // Small margin
 
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      // Calculate image dimensions to fit page width
+      const imgWidth = pageWidth - (margin * 2);
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+      // Add first page
+      let yPosition = margin;
+      let remainingHeight = imgHeight;
+      let sourceY = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      while (remainingHeight > 0) {
+        // Calculate how much we can fit on this page
+        const availableHeight = pageHeight - (margin * 2);
+        const heightToAdd = Math.min(remainingHeight, availableHeight);
+        
+        // Calculate source crop for this page
+        const sourceHeight = (heightToAdd / imgHeight) * canvas.height;
+        
+        // Create a temporary canvas for this page slice
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sourceHeight;
+        const pageCtx = pageCanvas.getContext('2d');
+        
+        // Draw the slice
+        pageCtx.drawImage(
+          canvas,
+          0, sourceY, canvas.width, sourceHeight,  // Source
+          0, 0, canvas.width, sourceHeight         // Destination
+        );
+        
+        const pageImgData = pageCanvas.toDataURL('image/png', 1.0);
+        
+        // Add to PDF
+        if (yPosition > margin) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+        
+        pdf.addImage(pageImgData, 'PNG', margin, yPosition, imgWidth, heightToAdd);
+        
+        // Update for next iteration
+        sourceY += sourceHeight;
+        remainingHeight -= heightToAdd;
+        yPosition += heightToAdd;
       }
 
       // Save PDF
@@ -206,7 +276,7 @@ export function Report() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 pdf-root" ref={reportRef}>
+    <div className="max-w-4xl mx-auto px-6 pdf-root" ref={reportRef} style={{ minHeight: '100vh' }}>
       {/* Header */}
       <motion.div
         className="mb-12"
@@ -387,16 +457,16 @@ export function Report() {
           </h2>
           <div className="space-y-3">
             {responses.map((response, index) => (
-              <GlassCard key={index} hover padding="md">
+              <GlassCard key={index} hover padding="md" className="break-inside-avoid">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <Badge variant="secondary" className="mb-2">
                       Question {index + 1}
                     </Badge>
-                    <p className="text-text-primary font-medium text-sm mb-1">
+                    <p className="text-text-primary font-medium text-sm mb-2 leading-relaxed">
                       {response.question?.text}
                     </p>
-                    <p className="text-xs text-text-muted line-clamp-2">
+                    <p className="text-xs text-text-muted leading-relaxed whitespace-pre-wrap break-words">
                       {response.answer}
                     </p>
                   </div>
