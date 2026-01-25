@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InterViewFlow AI - Phase 1 Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: {
+              base: '#F8FAFC',
+              elevated: '#FFFFFF',
+              muted: '#F1F5F9',
+            },
+            accent: {
+              violet: '#8B5CF6',
+              violetLight: '#A78BFA',
+              violetDark: '#7C3AED',
+              blue: '#3B82F6',
+              blueLight: '#60A5FA',
+              cyan: '#06B6D4',
+            },
+            text: {
+              primary: '#0F172A',
+              secondary: '#475569',
+              muted: '#94A3B8',
+            },
+            semantic: {
+              success: '#10B981',
+              warning: '#F59E0B',
+              error: '#EF4444',
+            }
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    .glass-elevated {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 50%, #06B6D4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .gradient-button {
+      background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-20px) scale(1.02); }
+    }
+
+    @keyframes meshMove {
+      0%, 100% { transform: translate(0%, 0%) scale(1); }
+      25% { transform: translate(5%, -5%) scale(1.05); }
+      50% { transform: translate(-3%, 3%) scale(0.98); }
+      75% { transform: translate(-5%, -2%) scale(1.02); }
+    }
+
+    .animate-float {
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .animate-mesh {
+      animation: meshMove 20s ease-in-out infinite;
+    }
+
+    .glow-violet {
+      box-shadow: 0 0 40px rgba(139, 92, 246, 0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-surface-base text-text-primary overflow-x-hidden">
+  <!-- Mesh Background -->
+  <div class="fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-surface-base via-white to-surface-muted"></div>
+    <div class="absolute top-0 -left-48 w-96 h-96 rounded-full blur-3xl bg-accent-violet/20 animate-mesh"></div>
+    <div class="absolute top-1/4 -right-64 w-[32rem] h-[32rem] rounded-full blur-3xl bg-accent-blue/15 animate-mesh" style="animation-delay: -5s;"></div>
+    <div class="absolute bottom-0 left-1/4 w-80 h-80 rounded-full blur-3xl bg-accent-cyan/10 animate-mesh" style="animation-delay: -10s;"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="fixed top-0 left-0 right-0 z-50">
+    <div class="mx-4 mt-4">
+      <nav class="mx-auto max-w-6xl rounded-2xl px-6 py-3 glass-elevated">
+        <div class="flex items-center justify-between">
+          <!-- Logo -->
+          <div class="flex items-center gap-2">
+            <div class="flex items-center justify-center w-9 h-9 rounded-xl gradient-button shadow-lg shadow-accent-violet/25">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+              </svg>
+            </div>
+            <span class="text-lg font-semibold">
+              Interview<span class="gradient-text">Flow</span>
+            </span>
+          </div>
+
+          <!-- Navigation -->
+          <div class="hidden md:flex items-center gap-1">
+            <a href="#" class="px-4 py-2 rounded-xl text-sm font-medium bg-accent-violet/10 text-accent-violet">Home</a>
+            <a href="#" class="px-4 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-white/40 transition-colors">Start Interview</a>
+            <a href="#" class="px-4 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-white/40 transition-colors">Reports</a>
+          </div>
+
+          <!-- CTA -->
+          <button class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white gradient-button shadow-lg shadow-accent-violet/25 hover:shadow-xl transition-all">
+            Begin Practice
+          </button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="pt-28 pb-12 px-4">
+    <div class="max-w-6xl mx-auto">
+      <!-- Hero Section -->
+      <section class="text-center max-w-3xl mx-auto mb-20">
+        <div class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-accent-violet/10 text-accent-violet border border-accent-violet/20 mb-6">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+          </svg>
+          Powered by Composable Intelligence
+        </div>
+
+        <h1 class="text-5xl lg:text-6xl font-bold leading-tight mb-6">
+          Master Your Next
+          <span class="block gradient-text">Technical Interview</span>
+        </h1>
+
+        <p class="text-lg text-text-secondary mb-8 max-w-2xl mx-auto">
+          Practice with an AI that understands context, adapts to your responses,
+          and provides actionable feedback to help you land your dream role.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <button class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-medium text-white gradient-button shadow-lg shadow-accent-violet/25 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+            Start Practicing
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </button>
+          <button class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-medium glass hover:bg-white/60 hover:shadow-lg active:scale-[0.98] transition-all">
+            View Sample Report
+          </button>
+        </div>
+      </section>
+
+      <!-- Pipeline Section -->
+      <section class="mb-20">
+        <div class="text-center mb-12">
+          <h2 class="text-3xl font-semibold mb-4">The Interview Pipeline</h2>
+          <p class="text-text-secondary max-w-xl mx-auto">
+            Every interview follows a structured flow, from role definition to final report.
+          </p>
+        </div>
+
+        <div class="relative">
+          <!-- Connection line -->
+          <div class="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-accent-violet/20 via-accent-blue/40 to-accent-cyan/20 -translate-y-1/2"></div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+            <!-- Pipeline stages -->
+            <div class="relative">
+              <div class="glass rounded-2xl p-4 text-center h-full hover:bg-white/60 hover:shadow-lg transition-all cursor-pointer">
+                <div class="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-accent-violet/10 text-accent-violet">
+                  <span class="text-lg font-semibold">1</span>
+                </div>
+                <h3 class="font-medium text-sm mb-1">Role</h3>
+                <p class="text-[10px] text-text-muted hidden sm:block">Define interview context</p>
+              </div>
+            </div>
+            <div class="relative">
+              <div class="glass rounded-2xl p-4 text-center h-full hover:bg-white/60 hover:shadow-lg transition-all cursor-pointer">
+                <div class="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-accent-blue/10 text-accent-blue">
+                  <span class="text-lg font-semibold">2</span>
+                </div>
+                <h3 class="font-medium text-sm mb-1">Context</h3>
+                <p class="text-[10px] text-text-muted hidden sm:block">Set up parameters</p>
+              </div>
+            </div>
+            <div class="relative">
+              <div class="glass rounded-2xl p-4 text-center h-full hover:bg-white/60 hover:shadow-lg transition-all cursor-pointer">
+                <div class="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-accent-cyan/10 text-accent-cyan">
+                  <span class="text-lg font-semibold">3</span>
+                </div>
+                <h3 class="font-medium text-sm mb-1">Question</h3>
+                <p class="text-[10px] text-text-muted hidden sm:block">Generate questions</p>
+              </div>
+            </div>
+            <div class="relative">
+              <div class="glass rounded-2xl p-4 text-center h-full hover:bg-white/60 hover:shadow-lg transition-all cursor-pointer">
+                <div class="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-accent-violet/10 text-accent-violet">
+                  <span class="text-lg font-semibold">4</span>
+                </div>
+                <h3 class="font-medium text-sm mb-1">Memory</h3>
+                <p class="text-[10px] text-text-muted hidden sm:block">Track history</p>
+              </div>
+            </div>
+            <div class="relative">
+              <div class="glass rounded-2xl p-4 text-center h-full hover:bg-white/60 hover:shadow-lg transition-all cursor-pointer">
+                <div class="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-accent-blue/10 text-accent-blue">
+                  <span class="text-lg font-semibold">5</span>
+                </div>
+                <h3 class="font-medium text-sm mb-1">Evaluation</h3>
+                <p class="text-[10px] text-text-muted hidden sm:block">Analyze responses</p>
+              </div>
+            </div>
+            <div class="relative">
+              <div class="glass rounded-2xl p-4 text-center h-full hover:bg-white/60 hover:shadow-lg transition-all cursor-pointer">
+                <div class="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-accent-cyan/10 text-accent-cyan">
+                  <span class="text-lg font-semibold">6</span>
+                </div>
+                <h3 class="font-medium text-sm mb-1">Feedback</h3>
+                <p class="text-[10px] text-text-muted hidden sm:block">Provide insights</p>
+              </div>
+            </div>
+            <div class="relative">
+              <div class="glass rounded-2xl p-4 text-center h-full hover:bg-white/60 hover:shadow-lg transition-all cursor-pointer">
+                <div class="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-accent-violet/10 text-accent-violet">
+                  <span class="text-lg font-semibold">7</span>
+                </div>
+                <h3 class="font-medium text-sm mb-1">Report</h3>
+                <p class="text-[10px] text-text-muted hidden sm:block">Generate summary</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Grid -->
+      <section class="mb-20">
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="glass-elevated rounded-2xl p-6 hover:shadow-lg transition-all">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-12 h-12 rounded-xl gradient-button flex items-center justify-center shadow-lg shadow-accent-violet/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold mb-2">Adaptive Questions</h3>
+                <p class="text-sm text-text-secondary">
+                  AI-powered questions that adjust to your skill level in real-time.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-elevated rounded-2xl p-6 hover:shadow-lg transition-all">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-12 h-12 rounded-xl gradient-button flex items-center justify-center shadow-lg shadow-accent-violet/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold mb-2">Instant Analysis</h3>
+                <p class="text-sm text-text-secondary">
+                  Get detailed feedback on clarity, depth, and communication.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-elevated rounded-2xl p-6 hover:shadow-lg transition-all">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-12 h-12 rounded-xl gradient-button flex items-center justify-center shadow-lg shadow-accent-violet/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold mb-2">Composable Pipeline</h3>
+                <p class="text-sm text-text-secondary">
+                  A modular interview flow from context to comprehensive report.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Section -->
+      <section>
+        <div class="glass rounded-2xl p-12 text-center border-2 border-accent-violet/20 glow-violet">
+          <h2 class="text-3xl font-semibold mb-4">Ready to level up?</h2>
+          <p class="text-text-secondary mb-8 max-w-md mx-auto">
+            Start your first mock interview and get instant AI-powered feedback.
+          </p>
+          <button class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-medium text-white gradient-button shadow-lg shadow-accent-violet/25 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+            Begin Your Interview
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Component Showcase -->
+      <section class="mt-20">
+        <h2 class="text-2xl font-semibold text-center mb-8">Phase 1 Component Showcase</h2>
+
+        <div class="grid md:grid-cols-2 gap-8">
+          <!-- GlassCard Variants -->
+          <div>
+            <h3 class="text-lg font-medium mb-4 text-text-secondary">GlassCard Variants</h3>
+            <div class="space-y-4">
+              <div class="glass rounded-2xl p-6">
+                <p class="font-medium mb-1">Default Glass</p>
+                <p class="text-sm text-text-muted">bg-white/40, backdrop-blur-xl</p>
+              </div>
+              <div class="glass-elevated rounded-2xl p-6">
+                <p class="font-medium mb-1">Elevated Glass</p>
+                <p class="text-sm text-text-muted">bg-white/60, stronger shadow</p>
+              </div>
+              <div class="glass rounded-2xl p-6 border-2 border-accent-violet/20 glow-violet">
+                <p class="font-medium mb-1">Bordered + Glow</p>
+                <p class="text-sm text-text-muted">With accent border and glow effect</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Button Variants -->
+          <div>
+            <h3 class="text-lg font-medium mb-4 text-text-secondary">Button Variants</h3>
+            <div class="space-y-4">
+              <div class="flex flex-wrap gap-3">
+                <button class="px-4 py-2 rounded-xl text-sm font-medium text-white gradient-button shadow-lg shadow-accent-violet/25 hover:shadow-xl transition-all">
+                  Primary
+                </button>
+                <button class="px-4 py-2 rounded-xl text-sm font-medium glass hover:bg-white/60 transition-all">
+                  Secondary
+                </button>
+                <button class="px-4 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-white/30 transition-all">
+                  Ghost
+                </button>
+                <button class="px-4 py-2 rounded-xl text-sm font-medium border border-accent-violet/30 text-accent-violet hover:bg-accent-violet/10 transition-all">
+                  Outline
+                </button>
+              </div>
+
+              <div>
+                <h4 class="text-sm font-medium text-text-muted mb-2">Input with focus glow</h4>
+                <input
+                  type="text"
+                  placeholder="Type something..."
+                  class="w-full h-11 px-4 py-2 rounded-xl text-sm bg-white/50 backdrop-blur-lg border border-white/30 placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-violet/30 focus:border-accent-violet/50 focus:bg-white/70 transition-all"
+                />
+              </div>
+
+              <div>
+                <h4 class="text-sm font-medium text-text-muted mb-2">Badge variants</h4>
+                <div class="flex flex-wrap gap-2">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-accent-violet/10 text-accent-violet border border-accent-violet/20">Default</span>
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-semantic-success/10 text-semantic-success border border-semantic-success/20">Success</span>
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-semantic-warning/10 text-semantic-warning border border-semantic-warning/20">Warning</span>
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-accent-blue/10 text-accent-blue border border-accent-blue/20">Blue</span>
+                </div>
+              </div>
+
+              <div>
+                <h4 class="text-sm font-medium text-text-muted mb-2">Progress bars</h4>
+                <div class="space-y-3">
+                  <div class="h-2 rounded-full bg-white/30 overflow-hidden">
+                    <div class="h-full w-4/5 rounded-full bg-gradient-to-r from-accent-violet to-accent-blue"></div>
+                  </div>
+                  <div class="h-2 rounded-full bg-white/30 overflow-hidden">
+                    <div class="h-full w-3/5 rounded-full bg-gradient-to-r from-semantic-success to-accent-cyan"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-6 text-center">
+    <p class="text-sm text-text-muted">
+      Built with composable intelligence • InterViewFlow AI
+    </p>
+  </footer>
+</body>
+</html>

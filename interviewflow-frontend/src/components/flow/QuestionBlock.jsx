@@ -1,0 +1,79 @@
+import { motion, AnimatePresence } from 'framer-motion'
+import { Send } from 'lucide-react'
+import { Button, Badge, Textarea } from '@/components/ui'
+import { GlassCard } from '@/components/shared'
+
+export function QuestionBlock({
+    question,
+    difficulty,
+    answer,
+    setAnswer,
+    isSubmitting,
+    onSubmit,
+}) {
+    return (
+        <GlassCard variant="elevated" className="min-h-96">
+            <AnimatePresence mode="wait">
+                {question ? (
+                    <motion.div
+                        key={question.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                    >
+                        <Badge variant="secondary" className="mb-4">
+                            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Level
+                        </Badge>
+                        <h2 className="font-serif text-xl font-semibold text-text-primary mb-6 leading-relaxed">
+                            {question.text}
+                        </h2>
+
+                        <div className="space-y-4">
+                            <Textarea
+                                className="h-48"
+                                placeholder="Type your answer here... Be thorough and structured in your response."
+                                value={answer}
+                                onChange={(e) => setAnswer(e.target.value)}
+                                disabled={isSubmitting}
+                            />
+
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-text-muted">
+                                    {answer.split(' ').filter(Boolean).length} words
+                                </span>
+                                <Button
+                                    onClick={onSubmit}
+                                    disabled={!answer.trim() || isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <motion.div
+                                                className="w-4 h-4 border-2 border-text-inverse/30 border-t-text-inverse rounded-full"
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                            />
+                                            Analyzing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Submit Answer
+                                            <Send className="w-4 h-4 ml-1" />
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <div className="flex items-center justify-center h-64">
+                        <motion.div
+                            className="w-8 h-8 border-2 border-accent-primary/30 border-t-accent-primary rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        />
+                    </div>
+                )}
+            </AnimatePresence>
+        </GlassCard>
+    )
+}

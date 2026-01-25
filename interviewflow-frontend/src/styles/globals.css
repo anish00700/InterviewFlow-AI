@@ -1,0 +1,216 @@
+/* Import Google Fonts - Source Serif 4 + DM Sans */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400;1,9..40,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base layer - Editorial Precision */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+  }
+
+  body {
+    @apply bg-surface-base text-text-primary font-sans;
+    overflow-x: hidden;
+  }
+
+  /* Typography hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif text-text-primary;
+    letter-spacing: -0.01em;
+  }
+
+  h1 {
+    @apply text-5xl sm:text-6xl font-semibold;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    @apply text-3xl sm:text-4xl font-semibold;
+    letter-spacing: -0.015em;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+
+  h4 {
+    @apply text-xl font-medium;
+  }
+
+  p {
+    @apply text-text-secondary leading-relaxed;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-accent-primaryMuted text-accent-primary;
+  }
+
+  /* Focus states - clean and subtle */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-accent-primary/30 ring-offset-2 ring-offset-surface-base;
+    transition: box-shadow 0.15s ease;
+  }
+
+  /* Smooth transitions on interactive elements */
+  a, button {
+    @apply transition-colors duration-200;
+  }
+}
+
+/* Component layer */
+@layer components {
+  /* Clean card base */
+  .card {
+    @apply bg-surface-elevated border border-border rounded-xl shadow-card;
+    @apply transition-all duration-250;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover hover:border-border-strong;
+  }
+
+  .card-interactive {
+    @apply card card-hover cursor-pointer;
+    @apply active:scale-[0.99];
+  }
+
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Accent gradient for special text */
+  .text-accent-gradient {
+    @apply bg-gradient-to-r from-accent-primary to-semantic-info bg-clip-text text-transparent;
+  }
+
+  /* Subtle section divider */
+  .divider {
+    @apply h-px bg-gradient-to-r from-transparent via-border to-transparent;
+  }
+
+  /* Focus ring for form elements */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary/50;
+    @apply transition-all duration-200;
+  }
+
+  /* Container with max-width */
+  .container-narrow {
+    @apply max-w-3xl mx-auto px-4 sm:px-6;
+  }
+
+  .container-wide {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Subtle grid pattern for backgrounds */
+  .bg-grid {
+    background-image: linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Dot pattern for backgrounds */
+  .bg-dots {
+    background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+/* Utility layer */
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Custom scrollbar - minimal */
+  .scrollbar-minimal {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(168, 162, 158, 0.3) transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb {
+    @apply bg-text-muted/30 rounded-full;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted/50;
+  }
+
+  /* Animation delays */
+  .animation-delay-100 { animation-delay: 100ms; }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
+  .animation-delay-500 { animation-delay: 500ms; }
+
+  /* Stagger children animations */
+  .stagger-children > * {
+    animation: fadeUp 0.5s ease-out backwards;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 75ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 225ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 375ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 450ms; }
+}
+
+/* Keyframe definitions */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* PDF Export Styles - Critical for proper PDF rendering */
+.pdf-exporting * {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.pdf-exporting .glass-card {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  border: 1px solid #E5E7EB !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04) !important;
+}
+
+.pdf-exporting body {
+  background: #ffffff !important;
+}
