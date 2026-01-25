@@ -96,4 +96,5 @@ export function MeshBackground({
   )
 }
 
+// Also export as default for compatibility
 export default MeshBackground

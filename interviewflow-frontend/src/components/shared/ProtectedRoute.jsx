@@ -9,7 +9,7 @@ export function ProtectedRoute({ children }) {
   const location = useLocation()
 
   if (isLoading) {
-    // Show loading spinner while checking auth
+    // Show loading spinner while checking auth (with timeout fallback)
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-base">
         <div className="w-8 h-8 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin" />

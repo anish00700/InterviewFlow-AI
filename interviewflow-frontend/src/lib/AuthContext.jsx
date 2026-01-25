@@ -10,6 +10,18 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  
+  // Safety timeout - ensure loading state doesn't block forever (reduced to 2 seconds)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn('⚠️ Auth check timeout - setting isLoading to false')
+        setIsLoading(false)
+      }
+    }, 2000) // 2 second timeout - don't block rendering
+    
+    return () => clearTimeout(timeout)
+  }, [isLoading])
 
   // Check for existing session on mount
   useEffect(() => {
@@ -37,7 +49,11 @@ export function AuthProvider({ children }) {
           localStorage.removeItem('interviewflow_user')
         }
       } catch (error) {
+        // Silently fail - don't block app rendering if API is unavailable
         console.error('Auth verification failed:', error)
+        // Clear invalid token
+        localStorage.removeItem('token')
+        localStorage.removeItem('interviewflow_user')
       } finally {
         setIsLoading(false)
       }
