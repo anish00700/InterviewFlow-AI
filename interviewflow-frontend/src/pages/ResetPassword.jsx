@@ -5,6 +5,7 @@ import { Lock, ArrowRight, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide
 import { Button, Input } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
+import { API_BASE_URL } from '@/lib/utils'
 
 export function ResetPassword() {
   const navigate = useNavigate()
@@ -44,7 +45,7 @@ export function ResetPassword() {
     }
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password })

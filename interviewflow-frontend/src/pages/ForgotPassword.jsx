@@ -5,6 +5,7 @@ import { Mail, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
+import { API_BASE_URL } from '@/lib/utils'
 
 export function ForgotPassword() {
   const navigate = useNavigate()
@@ -20,7 +21,7 @@ export function ForgotPassword() {
     setSuccess(false)
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

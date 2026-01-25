@@ -51,6 +51,8 @@ interviewflow-frontend/node_modules/
 interviewflow-frontend/dist/
 interviewflow-frontend/.env
 interviewflow-frontend/.env.local
+interviewflow-frontend/.vercel
+interviewflow-frontend/.vercel.json
 
 # Logs
 logs/

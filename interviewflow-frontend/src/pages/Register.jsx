@@ -6,6 +6,7 @@ import { Button, Input } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
 import { useAuth } from '@/lib/AuthContext'
+import { API_BASE_URL } from '@/lib/utils'
 
 export function Register() {
   const navigate = useNavigate()
@@ -59,7 +60,7 @@ export function Register() {
     }
 
     try {
-      const response = await fetch('/api/auth/send-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -123,7 +124,7 @@ export function Register() {
     }
 
     try {
-      const response = await fetch('/api/auth/verify-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp, name, password })
@@ -163,7 +164,7 @@ export function Register() {
     setOtpTimer(0)
 
     try {
-      const response = await fetch('/api/auth/send-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -534,7 +535,7 @@ export function Register() {
         <Button 
           variant="secondary" 
           className="w-full"
-          onClick={() => window.location.href = '/api/auth/google'}
+          onClick={() => window.location.href = `${API_BASE_URL}/api/auth/google`}
           type="button"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">

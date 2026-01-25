@@ -83,3 +83,6 @@ export function debounce(fn, delay) {
     timeoutId = setTimeout(() => fn(...args), delay)
   }
 }
+
+// API base URL - use environment variable or default to relative path
+export const API_BASE_URL = import.meta.env.VITE_API_URL || ''

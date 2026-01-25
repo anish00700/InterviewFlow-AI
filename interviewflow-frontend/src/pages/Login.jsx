@@ -6,6 +6,7 @@ import { Button, Input } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
 import { useAuth } from '@/lib/AuthContext'
+import { API_BASE_URL } from '@/lib/utils'
 
 export function Login() {
   const navigate = useNavigate()
@@ -176,7 +177,7 @@ export function Login() {
         <Button 
           variant="secondary" 
           className="w-full"
-          onClick={() => window.location.href = '/api/auth/google'}
+          onClick={() => window.location.href = `${API_BASE_URL}/api/auth/google`}
           type="button"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">

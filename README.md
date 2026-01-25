@@ -447,6 +447,19 @@ This project is licensed under the ISC License.
 
 ---
 
+## 🚀 Deployment
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+### Quick Deploy
+
+1. **Backend**: Deploy to [Railway](https://railway.app)
+2. **Frontend**: Deploy to [Vercel](https://vercel.com)
+3. Set environment variables as documented
+4. Update OAuth callback URLs
+
+---
+
 ## 📞 Support
 
 For issues, questions, or contributions, please open an issue on the repository.

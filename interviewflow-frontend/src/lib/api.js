@@ -1,11 +1,11 @@
-import { delay } from './utils'
+import { delay, API_BASE_URL } from './utils'
 
 /**
  * Start a new interview session
  */
 export async function startInterview(settings) {
   try {
-    const response = await fetch('/api/interview/start', {
+    const response = await fetch(`${API_BASE_URL}/api/interview/start`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export async function streamAnswer(text, questionId, interviewId, onChunk, onCom
   // 1. Call Real Backend to get the evaluation
   let finalResult;
   try {
-    const response = await fetch('/api/interview/answer', {
+    const response = await fetch(`${API_BASE_URL}/api/interview/answer`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

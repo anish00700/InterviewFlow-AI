@@ -5,6 +5,7 @@ import { Button, Input } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
 import { useAuth } from '@/lib/AuthContext'
+import { API_BASE_URL } from '@/lib/utils'
 
 export function Settings() {
   const { user, logout } = useAuth()
@@ -66,7 +67,7 @@ export function Settings() {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/send-email-update-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-email-update-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +98,7 @@ export function Settings() {
     setError('')
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/send-email-update-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-email-update-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +136,7 @@ export function Settings() {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/update-email', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-email`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +197,7 @@ export function Settings() {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/update-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

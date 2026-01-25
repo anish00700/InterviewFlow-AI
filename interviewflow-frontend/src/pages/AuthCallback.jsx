@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { GlassCard } from '@/components/shared'
+import { API_BASE_URL } from '@/lib/utils'
 
 export function AuthCallback() {
   const navigate = useNavigate()
@@ -25,7 +26,7 @@ export function AuthCallback() {
       localStorage.setItem('token', token)
       
       // Fetch user data
-      fetch('/api/auth/me', {
+      fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
