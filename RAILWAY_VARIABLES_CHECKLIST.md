@@ -7,8 +7,8 @@ Based on your Railway variables, these are **correctly configured**:
 - ✅ `SMTP_HOST`: `smtp.gmail.com` ✓
 - ✅ `SMTP_PORT`: `587` ✓
 - ✅ `SMTP_SECURE`: `false` ✓ (Correct for STARTTLS on port 587)
-- ✅ `SMTP_USER`: `anishpatil00170@gmail.com` ✓
-- ✅ `SMTP_PASS`: `vinnxwpzmnfvqmsk` ✓ (App Password format - correct)
+- ✅ `SMTP_USER`: Set (Gmail address) ✓
+- ✅ `SMTP_PASS`: Set (Gmail App Password) ✓
 
 **Note:** The SMTP configuration is correct. The connection timeout issue is likely due to Railway's network restrictions, not incorrect variables.
 
@@ -105,7 +105,7 @@ Check the `emailService` section:
 - [ ] `SMTP_HOST` = `smtp.gmail.com ✓
 - [ ] `SMTP_PORT` = `587` ✓
 - [ ] `SMTP_SECURE` = `false` ✓
-- [ ] `SMTP_USER` = `anishpatil00170@gmail.com` ✓
+- [ ] `SMTP_USER` = Your Gmail address ✓
 - [ ] `SMTP_PASS` = App Password (16 chars, no spaces) ✓
 - [ ] `FRONTEND_URL` = `https://interview-flow-ai-oewj.vercel.app` (verify)
 - [ ] `GOOGLE_CALLBACK_URL` = `https://interviewflow-ai-production.up.railway.app/api/auth/google/callback` (verify)

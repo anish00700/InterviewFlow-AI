@@ -33,8 +33,8 @@ Since emails are sent asynchronously, errors are logged but not shown to users.
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
    SMTP_SECURE=false
-   SMTP_USER=anishpatil00170@gmail.com
-   SMTP_PASS=vinnxwpzmnfvqmsk
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-app-password
    ```
 3. **Important:** `SMTP_PASS` must be a Gmail App Password, not your regular password
 
