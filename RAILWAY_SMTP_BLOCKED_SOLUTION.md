@@ -39,7 +39,13 @@ Railway is blocking outbound SMTP connections to Gmail, causing connection timeo
    SMTP_SECURE=false
    SMTP_USER=apikey
    SMTP_PASS=your-sendgrid-api-key-here
+   SMTP_FROM_EMAIL=your-verified-email@example.com
    ```
+   
+   **Important:**
+   - `SMTP_USER` must be the literal string `apikey`
+   - `SMTP_PASS` is your SendGrid API key
+   - `SMTP_FROM_EMAIL` should be a verified sender email in SendGrid (optional but recommended)
 
 4. **Railway will auto-redeploy** - emails should work immediately
 

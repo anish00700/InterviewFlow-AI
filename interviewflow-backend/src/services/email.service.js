@@ -37,25 +37,46 @@ class EmailService {
             debug: process.env.NODE_ENV === 'development'
         };
 
-        // If using Gmail with app password
+        // Check if email service is configured
         if (process.env.SMTP_USER && process.env.SMTP_PASS) {
             this.transporter = nodemailer.createTransport(emailConfig);
             console.log(`✓ Email service configured: ${emailConfig.host}:${emailConfig.port}`);
             console.log(`✓ Connection timeout: ${emailConfig.connectionTimeout}ms`);
+            console.log(`✓ SMTP_USER: ${process.env.SMTP_USER.substring(0, 10)}...`);
+            console.log(`✓ SMTP_PASS: ${process.env.SMTP_PASS.substring(0, 5)}... (${process.env.SMTP_PASS.length} chars)`);
+            
+            // Test transporter connection (non-blocking)
+            this.transporter.verify().then(() => {
+                console.log('✓ Email transporter verified - ready to send emails');
+            }).catch((verifyError) => {
+                console.error('⚠ Email transporter verification failed:', verifyError.message);
+                console.error('⚠ This may cause email sending to fail. Check SMTP credentials.');
+            });
         } else {
-            console.warn('⚠ Email service not configured. Set SMTP_USER and SMTP_PASS in .env');
-            console.warn('⚠ For Gmail, you need an App Password. See GMAIL_SETUP.md for instructions.');
+            console.warn('⚠ Email service not configured. Set SMTP_USER and SMTP_PASS in Railway variables');
+            console.warn('⚠ For SendGrid: SMTP_USER=apikey, SMTP_PASS=your-api-key');
+            console.warn('⚠ For Gmail: Use App Password. See GMAIL_SETUP.md for instructions.');
         }
     }
 
     async sendOTP(email, otp, retries = 3) {
         try {
+            console.log(`📧 sendOTP called for ${email}, retries=${retries}`);
             if (!this.transporter) {
+                console.error('❌ Email transporter not initialized!');
                 throw new Error('Email service not configured');
             }
+            console.log(`📧 Email transporter ready, attempting to send to ${email}...`);
 
+            // For SendGrid, use a verified sender email (not SMTP_USER which is "apikey")
+            const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@interviewflow.ai';
+            // If SMTP_USER is "apikey" (SendGrid), use a default or configured email
+            const senderEmail = (process.env.SMTP_USER === 'apikey' && process.env.SMTP_FROM_EMAIL) 
+                ? process.env.SMTP_FROM_EMAIL 
+                : (process.env.SMTP_USER === 'apikey' ? 'noreply@interviewflow.ai' : fromEmail);
+            
             const mailOptions = {
-                from: `"InterviewFlow AI" <${process.env.SMTP_USER || 'noreply@interviewflow.ai'}>`,
+                from: `"InterviewFlow AI" <${senderEmail}>`,
                 to: email,
                 subject: 'Verify Your Email - InterviewFlow AI',
                 html: `
@@ -100,8 +121,9 @@ class EmailService {
             let lastError;
             for (let attempt = 0; attempt < retries; attempt++) {
                 try {
+                    console.log(`📧 Attempt ${attempt + 1}/${retries}: Sending email to ${email}...`);
                     const info = await this.transporter.sendMail(mailOptions);
-                    console.log('Email sent:', info.messageId);
+                    console.log(`✓ Email sent successfully! Message ID: ${info.messageId}`);
                     return { success: true, messageId: info.messageId };
                 } catch (error) {
                     lastError = error;
@@ -193,14 +215,24 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
 
     async sendPasswordResetEmail(email, resetToken, retries = 3) {
         try {
+            console.log(`📧 sendPasswordResetEmail called for ${email}, retries=${retries}`);
             if (!this.transporter) {
+                console.error('❌ Email transporter not initialized!');
                 throw new Error('Email service not configured');
             }
+            console.log(`📧 Email transporter ready, attempting to send password reset to ${email}...`);
 
             const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
+            // For SendGrid, use a verified sender email (not SMTP_USER which is "apikey")
+            const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@interviewflow.ai';
+            // If SMTP_USER is "apikey" (SendGrid), use a default or configured email
+            const senderEmail = (process.env.SMTP_USER === 'apikey' && process.env.SMTP_FROM_EMAIL) 
+                ? process.env.SMTP_FROM_EMAIL 
+                : (process.env.SMTP_USER === 'apikey' ? 'noreply@interviewflow.ai' : fromEmail);
+            
             const mailOptions = {
-                from: `"InterviewFlow AI" <${process.env.SMTP_USER || 'noreply@interviewflow.ai'}>`,
+                from: `"InterviewFlow AI" <${senderEmail}>`,
                 to: email,
                 subject: 'Reset Your Password - InterviewFlow AI',
                 html: `
@@ -250,8 +282,9 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
             let lastError;
             for (let attempt = 0; attempt < retries; attempt++) {
                 try {
+                    console.log(`📧 Attempt ${attempt + 1}/${retries}: Sending password reset email to ${email}...`);
                     const info = await this.transporter.sendMail(mailOptions);
-                    console.log('Password reset email sent:', info.messageId);
+                    console.log(`✓ Password reset email sent successfully! Message ID: ${info.messageId}`);
                     return { success: true, messageId: info.messageId };
                 } catch (error) {
                     lastError = error;

@@ -75,10 +75,17 @@ exports.sendOTP = async (req, res) => {
 
         // Send OTP via email asynchronously (fire and forget)
         // This prevents blocking the response while email is being sent
+        console.log(`📧 Attempting to send OTP email to ${normalizedEmail}...`);
         emailService.sendOTP(normalizedEmail, otp).then(() => {
             console.log(`✓ Registration OTP sent successfully to ${normalizedEmail}`);
         }).catch((emailError) => {
             console.error('✗ Registration OTP email sending failed (async):', emailError);
+            console.error('✗ Error details:', {
+                code: emailError.code,
+                message: emailError.message,
+                response: emailError.response,
+                responseCode: emailError.responseCode
+            });
             
             // Log error but don't fail the request since OTP is already saved
             // User can request a new OTP if email doesn't arrive
@@ -372,12 +379,20 @@ exports.forgotPassword = async (req, res) => {
 
         // Send reset email asynchronously (fire and forget)
         // This prevents blocking the response while email is being sent
-        emailService.sendPasswordResetEmail(email.trim().toLowerCase(), resetToken.token)
+        const resetEmail = email.trim().toLowerCase();
+        console.log(`📧 Attempting to send password reset email to ${resetEmail}...`);
+        emailService.sendPasswordResetEmail(resetEmail, resetToken.token)
             .then(() => {
-                console.log(`✓ Password reset email sent successfully to ${email.trim().toLowerCase()}`);
+                console.log(`✓ Password reset email sent successfully to ${resetEmail}`);
             })
             .catch((emailError) => {
                 console.error('✗ Password reset email sending failed (async):', emailError);
+                console.error('✗ Error details:', {
+                    code: emailError.code,
+                    message: emailError.message,
+                    response: emailError.response,
+                    responseCode: emailError.responseCode
+                });
                 // Delete the token if email fails (but don't block the response)
                 PasswordReset.deleteOne({ _id: resetToken._id }).catch(err => {
                     console.error('Failed to delete reset token:', err);
