@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd interviewflow-frontend && npm run build",
+  "outputDirectory": "interviewflow-frontend/dist",
+  "installCommand": "cd interviewflow-frontend && npm install",
+  "framework": "vite"
+}
+
+
