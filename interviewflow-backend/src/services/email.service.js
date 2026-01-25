@@ -29,8 +29,12 @@ class EmailService {
             // Additional options for better reliability
             tls: {
                 rejectUnauthorized: false, // Allow self-signed certificates if needed
-                ciphers: 'SSLv3'
-            }
+                minVersion: 'TLSv1.2'
+            },
+            // Try alternative connection method
+            requireTLS: true,
+            // Debug mode (set to true for more detailed logs)
+            debug: process.env.NODE_ENV === 'development'
         };
 
         // If using Gmail with app password

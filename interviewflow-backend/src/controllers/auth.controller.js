@@ -35,55 +35,71 @@ exports.sendOTP = async (req, res) => {
             return res.status(400).json({ message: 'Please provide a valid email address' });
         }
 
+        // Normalize email (lowercase for consistency)
+        const normalizedEmail = email.trim().toLowerCase();
+
         // Check if user already exists
-        const userExists = await User.findOne({ email });
+        const userExists = await User.findOne({ email: normalizedEmail });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists with this email' });
         }
 
         // Delete any existing unverified OTPs for this email
-        await OTP.deleteMany({ email, verified: false });
+        await OTP.deleteMany({ email: normalizedEmail, verified: false });
 
         // Generate new OTP
         const otp = generateOTP();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-        // Save OTP to database
+        // Save OTP to database (with normalized email)
         await OTP.create({
-            email,
+            email: normalizedEmail,
             otp,
             expiresAt
         });
 
         // Return response immediately (don't wait for email)
-        res.status(200).json({
+        // In development, include OTP for testing (if email fails)
+        const responseData = {
             message: 'OTP sent successfully to your email',
-            email: email // Return email for frontend confirmation
-        });
+            email: normalizedEmail // Return normalized email for frontend confirmation
+        };
+
+        // In development mode, include OTP in response for testing
+        if (process.env.NODE_ENV === 'development') {
+            responseData.devOTP = otp; // Include OTP for testing when email fails
+            console.log(`🔑 Dev Mode - OTP for ${normalizedEmail}: ${otp}`);
+        }
+
+        res.status(200).json(responseData);
 
         // Send OTP via email asynchronously (fire and forget)
         // This prevents blocking the response while email is being sent
-        emailService.sendOTP(email, otp).then(() => {
-            console.log(`✓ Registration OTP sent successfully to ${email}`);
+        emailService.sendOTP(normalizedEmail, otp).then(() => {
+            console.log(`✓ Registration OTP sent successfully to ${normalizedEmail}`);
         }).catch((emailError) => {
             console.error('✗ Registration OTP email sending failed (async):', emailError);
             
             // Log error but don't fail the request since OTP is already saved
             // User can request a new OTP if email doesn't arrive
             
-            // In dev mode, log OTP for testing
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('⚠ OTP for testing (email failed):', otp);
-            }
+            // Always log OTP for debugging (especially useful when email fails)
+            console.warn(`⚠ OTP for ${normalizedEmail} (email failed): ${otp}`);
+            console.warn(`⚠ Users can still verify with this OTP if they have it`);
             
             // Log specific error types for debugging
             const isRateLimit = emailError.message?.includes('rate limit') || 
                                emailError.message?.includes('rate limited');
+            const isConnectionTimeout = emailError.code === 'ETIMEDOUT' || 
+                                       emailError.code === 'ECONNRESET' ||
+                                       emailError.message?.includes('Connection timeout');
             const isBadCredentials = emailError.message?.includes('BadCredentials') || 
                                     emailError.message?.includes('Username and Password not accepted') ||
                                     emailError.message?.includes('Email authentication failed');
             
-            if (isRateLimit) {
+            if (isConnectionTimeout) {
+                console.error('⚠ Connection timeout - Railway may be blocking SMTP. Check Railway logs.');
+            } else if (isRateLimit) {
                 console.warn('⚠ Email rate limited - user can retry after delay');
             } else if (isBadCredentials) {
                 console.error('⚠ Email authentication failed - check SMTP credentials in Railway');
@@ -118,9 +134,12 @@ exports.verifyOTP = async (req, res) => {
             return res.status(400).json({ message: 'Password must be at least 6 characters long' });
         }
 
-        // Find the OTP record
+        // Normalize email (lowercase for consistency) - MUST match sendOTP normalization
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Find the OTP record (use normalized email)
         const otpRecord = await OTP.findOne({
-            email,
+            email: normalizedEmail,
             verified: false
         }).sort({ createdAt: -1 }); // Get the most recent OTP
 
@@ -150,8 +169,8 @@ exports.verifyOTP = async (req, res) => {
             });
         }
 
-        // Check if user already exists (double-check)
-        const userExists = await User.findOne({ email });
+        // Check if user already exists (double-check, use normalized email)
+        const userExists = await User.findOne({ email: normalizedEmail });
         if (userExists) {
             await OTP.deleteOne({ _id: otpRecord._id });
             return res.status(400).json({ message: 'User already exists with this email' });
@@ -161,10 +180,10 @@ exports.verifyOTP = async (req, res) => {
         otpRecord.verified = true;
         await otpRecord.save();
 
-        // Create user with verified email
+        // Create user with verified email (use normalized email)
         const user = await User.create({
-            name,
-            email,
+            name: name.trim(),
+            email: normalizedEmail,
             password,
             emailVerified: true,
             emailVerifiedAt: new Date()
