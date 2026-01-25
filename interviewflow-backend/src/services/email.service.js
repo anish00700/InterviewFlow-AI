@@ -17,13 +17,27 @@ class EmailService {
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
+            },
+            // Connection timeout settings (increased for Railway/cloud environments)
+            connectionTimeout: 60000, // 60 seconds
+            greetingTimeout: 30000, // 30 seconds
+            socketTimeout: 60000, // 60 seconds
+            // Retry connection on timeout
+            pool: true,
+            maxConnections: 1,
+            maxMessages: 3,
+            // Additional options for better reliability
+            tls: {
+                rejectUnauthorized: false, // Allow self-signed certificates if needed
+                ciphers: 'SSLv3'
             }
         };
 
         // If using Gmail with app password
         if (process.env.SMTP_USER && process.env.SMTP_PASS) {
             this.transporter = nodemailer.createTransport(emailConfig);
-            console.log(`✓ Email service configured: ${emailConfig.host}`);
+            console.log(`✓ Email service configured: ${emailConfig.host}:${emailConfig.port}`);
+            console.log(`✓ Connection timeout: ${emailConfig.connectionTimeout}ms`);
         } else {
             console.warn('⚠ Email service not configured. Set SMTP_USER and SMTP_PASS in .env');
             console.warn('⚠ For Gmail, you need an App Password. See GMAIL_SETUP.md for instructions.');
@@ -78,7 +92,7 @@ class EmailService {
                 `
             };
 
-            // Retry logic with exponential backoff for rate limiting
+            // Retry logic with exponential backoff for rate limiting and connection timeouts
             let lastError;
             for (let attempt = 0; attempt < retries; attempt++) {
                 try {
@@ -88,19 +102,34 @@ class EmailService {
                 } catch (error) {
                     lastError = error;
                     
+                    // Check if it's a connection timeout error
+                    const isConnectionTimeout = error.code === 'ETIMEDOUT' || 
+                                               error.code === 'ECONNRESET' ||
+                                               error.message?.includes('Connection timeout') ||
+                                               error.message?.includes('timeout');
+                    
                     // Check if it's a rate limit error
                     const isRateLimit = error.code === 'EAUTH' && 
                                        (error.responseCode === 403 || 
                                         error.message?.includes('rate limit') ||
                                         error.message?.includes('rate limited'));
                     
-                    if (isRateLimit && attempt < retries - 1) {
-                        // Extract wait time from error message if available
-                        const waitMatch = error.message?.match(/Check again in (\d+) seconds?/i);
-                        const waitSeconds = waitMatch ? parseInt(waitMatch[1]) : Math.pow(2, attempt + 1) * 5; // Exponential backoff: 10s, 20s, 40s
+                    // Retry on connection timeout or rate limit
+                    if ((isConnectionTimeout || isRateLimit) && attempt < retries - 1) {
+                        const waitSeconds = isConnectionTimeout 
+                            ? Math.pow(2, attempt + 1) * 2 // 4s, 8s, 16s for timeouts
+                            : (error.message?.match(/Check again in (\d+) seconds?/i) 
+                                ? parseInt(error.message.match(/Check again in (\d+) seconds?/i)[1])
+                                : Math.pow(2, attempt + 1) * 5); // Exponential backoff for rate limits
                         
-                        console.log(`Rate limited. Waiting ${waitSeconds} seconds before retry ${attempt + 1}/${retries}...`);
+                        console.log(`${isConnectionTimeout ? 'Connection timeout' : 'Rate limited'}. Waiting ${waitSeconds} seconds before retry ${attempt + 1}/${retries}...`);
                         await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000));
+                        
+                        // Recreate transporter on connection timeout to reset connection
+                        if (isConnectionTimeout) {
+                            console.log('Recreating email transporter after timeout...');
+                            this.initializeTransporter();
+                        }
                         continue;
                     }
                     
@@ -113,6 +142,11 @@ class EmailService {
             throw lastError;
         } catch (error) {
             console.error('Email sending error:', error);
+            
+            // Handle connection timeout errors
+            if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET' || error.message?.includes('Connection timeout')) {
+                throw new Error(`Email service connection timeout. This may be due to network restrictions from your hosting provider. Please try again later or consider using an alternative email service. Error: ${error.message}`);
+            }
             
             // Provide user-friendly error messages
             if (error.code === 'EAUTH') {
@@ -136,7 +170,7 @@ Steps to create a Gmail App Password:
 4. Enter "InterviewFlow" as the app name
 5. Click "Generate"
 6. Copy the 16-character password (no spaces)
-7. Update SMTP_PASS in your .env file with this App Password
+7. Update SMTP_PASS in Railway variables with this App Password
 
 Note: You need 2-Step Verification enabled on your Google account first.
 If you don't have 2-Step Verification, enable it at: https://myaccount.google.com/security
@@ -146,7 +180,7 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
                     throw new Error(detailedError);
                 }
                 
-                throw new Error('Email authentication failed. Please check your SMTP_USER and SMTP_PASS in .env file. For Gmail, use an App Password, not your regular password.');
+                throw new Error('Email authentication failed. Please check your SMTP_USER and SMTP_PASS in environment variables. For Gmail, use an App Password, not your regular password.');
             }
             
             throw new Error(`Failed to send email: ${error.message}`);
@@ -208,7 +242,7 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
                 `
             };
 
-            // Retry logic with exponential backoff for rate limiting
+            // Retry logic with exponential backoff for rate limiting and connection timeouts
             let lastError;
             for (let attempt = 0; attempt < retries; attempt++) {
                 try {
@@ -218,18 +252,35 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
                 } catch (error) {
                     lastError = error;
                     
+                    // Check if it's a connection timeout error
+                    const isConnectionTimeout = error.code === 'ETIMEDOUT' || 
+                                               error.code === 'ECONNRESET' ||
+                                               error.code === 'ETIMEDOUT' ||
+                                               error.message?.includes('Connection timeout') ||
+                                               error.message?.includes('timeout');
+                    
                     // Check if it's a rate limit error
                     const isRateLimit = error.code === 'EAUTH' && 
                                        (error.responseCode === 403 || 
                                         error.message?.includes('rate limit') ||
                                         error.message?.includes('rate limited'));
                     
-                    if (isRateLimit && attempt < retries - 1) {
-                        const waitMatch = error.message?.match(/Check again in (\d+) seconds?/i);
-                        const waitSeconds = waitMatch ? parseInt(waitMatch[1]) : Math.pow(2, attempt + 1) * 5;
+                    // Retry on connection timeout or rate limit
+                    if ((isConnectionTimeout || isRateLimit) && attempt < retries - 1) {
+                        const waitSeconds = isConnectionTimeout 
+                            ? Math.pow(2, attempt + 1) * 2 // 4s, 8s, 16s for timeouts
+                            : (error.message?.match(/Check again in (\d+) seconds?/i) 
+                                ? parseInt(error.message.match(/Check again in (\d+) seconds?/i)[1])
+                                : Math.pow(2, attempt + 1) * 5); // Exponential backoff for rate limits
                         
-                        console.log(`Rate limited. Waiting ${waitSeconds} seconds before retry ${attempt + 1}/${retries}...`);
+                        console.log(`${isConnectionTimeout ? 'Connection timeout' : 'Rate limited'}. Waiting ${waitSeconds} seconds before retry ${attempt + 1}/${retries}...`);
                         await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000));
+                        
+                        // Recreate transporter on connection timeout to reset connection
+                        if (isConnectionTimeout) {
+                            console.log('Recreating email transporter after timeout...');
+                            this.initializeTransporter();
+                        }
                         continue;
                     }
                     
@@ -240,6 +291,11 @@ Your current SMTP_USER: ${process.env.SMTP_USER || 'not set'}
             throw lastError;
         } catch (error) {
             console.error('Password reset email sending error:', error);
+            
+            // Handle connection timeout errors
+            if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET' || error.message?.includes('Connection timeout')) {
+                throw new Error(`Email service connection timeout. This may be due to network restrictions. Please try again later or check your SMTP configuration. Error: ${error.message}`);
+            }
             
             if (error.code === 'EAUTH') {
                 if (error.responseCode === 403 && error.message?.includes('rate limit')) {

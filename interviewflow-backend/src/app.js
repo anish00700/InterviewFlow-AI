@@ -81,6 +81,7 @@ app.get('/health', (req, res) => {
 // Diagnostic endpoint to check API configuration
 app.get('/api/diagnostics', async (req, res) => {
     const { discoverAvailableModels, findAvailableModel, MODEL_PRIORITY, DEFAULT_MODEL, GITHUB_MODELS_ENDPOINT } = require('./config/github-models');
+    const emailService = require('./services/email.service');
     
     const hasToken = !!process.env.GITHUB_TOKEN;
     const tokenLength = process.env.GITHUB_TOKEN ? process.env.GITHUB_TOKEN.length : 0;
@@ -119,6 +120,33 @@ app.get('/api/diagnostics', async (req, res) => {
         }
     }
     
+    // Check email service configuration
+    const emailConfig = {
+        smtpHost: process.env.SMTP_HOST || 'not set',
+        smtpPort: process.env.SMTP_PORT || 'not set',
+        smtpUser: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 5)}...` : 'not set',
+        smtpPass: process.env.SMTP_PASS ? '***configured***' : 'not set',
+        transporterConfigured: !!emailService.transporter
+    };
+    
+    // Test email service if configured
+    let emailTest = { status: 'not_tested', message: null };
+    if (emailService.transporter) {
+        try {
+            emailTest = await emailService.verifyEmailConfig();
+        } catch (error) {
+            emailTest = { 
+                status: 'error', 
+                message: error.message || 'Email service verification failed' 
+            };
+        }
+    } else {
+        emailTest = {
+            status: 'not_configured',
+            message: 'SMTP_USER and/or SMTP_PASS not set in environment variables'
+        };
+    }
+    
     res.status(200).json({
         status: 'ok',
         githubModels: {
@@ -132,6 +160,11 @@ app.get('/api/diagnostics', async (req, res) => {
             modelPriority: MODEL_PRIORITY,
             endpoint: GITHUB_MODELS_ENDPOINT,
             note: 'Token must have models:read permissions'
+        },
+        emailService: {
+            ...emailConfig,
+            test: emailTest,
+            note: 'For Gmail, use App Password (not regular password). See EMAIL_TROUBLESHOOTING.md'
         },
         timestamp: new Date()
     });
