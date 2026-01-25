@@ -4,24 +4,18 @@ const {
     register, 
     login, 
     getMe, 
-    sendOTP, 
-    verifyOTP,
     googleAuth,
     googleCallback,
     githubAuth,
     githubCallback,
     forgotPassword,
     resetPassword,
-    sendEmailUpdateOTP,
-    updateEmail,
     updatePassword
 } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 
-// OTP-based registration
-router.post('/send-otp', sendOTP);
-router.post('/verify-otp', verifyOTP);
-router.post('/register', register); // Legacy endpoint
+// Registration (no OTP required)
+router.post('/register', register);
 
 // Traditional login
 router.post('/login', login);
@@ -38,8 +32,6 @@ router.get('/github/callback', githubCallback);
 
 // Protected routes
 router.get('/me', protect, getMe);
-router.post('/send-email-update-otp', protect, sendEmailUpdateOTP);
-router.put('/update-email', protect, updateEmail);
 router.put('/update-password', protect, updatePassword);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, User, Eye, EyeOff, CheckCircle2, AlertCircle, Save, Clock, ArrowRight } from 'lucide-react'
+import { Mail, Lock, User, Eye, EyeOff, CheckCircle2, AlertCircle, Save } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
@@ -13,14 +13,6 @@ export function Settings() {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
-  // Email update state
-  const [email, setEmail] = useState('')
-  const [newEmail, setNewEmail] = useState('')
-  const [emailStep, setEmailStep] = useState(1) // 1: enter email, 2: verify OTP
-  const [otp, setOtp] = useState('')
-  const [isSendingOTP, setIsSendingOTP] = useState(false)
-  const [otpSent, setOtpSent] = useState(false)
-  const [otpTimer, setOtpTimer] = useState(0)
 
   // Password update state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -30,145 +22,6 @@ export function Settings() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // Load user data
-  useEffect(() => {
-    if (user) {
-      setEmail(user.email || '')
-      setNewEmail(user.email || '')
-    }
-  }, [user])
-
-  // OTP Timer
-  useEffect(() => {
-    let interval = null
-    if (otpTimer > 0) {
-      interval = setInterval(() => {
-        setOtpTimer((prev) => prev - 1)
-      }, 1000)
-    } else if (otpTimer === 0 && otpSent) {
-      // Timer expired
-    }
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [otpTimer, otpSent])
-
-  const handleSendOTP = async (e) => {
-    e.preventDefault()
-    setIsSendingOTP(true)
-    setError('')
-    setSuccess('')
-
-    if (!newEmail || newEmail === email) {
-      setError('Please enter a new email address')
-      setIsSendingOTP(false)
-      return
-    }
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/auth/send-email-update-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ email: newEmail })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to send verification code')
-      }
-
-      setOtpSent(true)
-      setEmailStep(2)
-      setOtpTimer(600) // 10 minutes
-      setSuccess('Verification code sent to your new email address')
-    } catch (err) {
-      setError(err.message || 'Failed to send verification code')
-    } finally {
-      setIsSendingOTP(false)
-    }
-  }
-
-  const handleResendOTP = async () => {
-    setIsSendingOTP(true)
-    setError('')
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/auth/send-email-update-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ email: newEmail })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to resend verification code')
-      }
-
-      setOtpTimer(600) // Reset timer
-      setSuccess('Verification code resent successfully')
-    } catch (err) {
-      setError(err.message || 'Failed to resend verification code')
-    } finally {
-      setIsSendingOTP(false)
-    }
-  }
-
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    setSuccess('')
-
-    if (!otp || otp.length !== 6) {
-      setError('Please enter a valid 6-digit verification code')
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/auth/update-email`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ email: newEmail, otp })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update email')
-      }
-
-      setSuccess('Email updated successfully! Please sign in again with your new email.')
-      setEmail(newEmail)
-      setEmailStep(1)
-      setOtp('')
-      setOtpSent(false)
-      setOtpTimer(0)
-      
-      // Logout and redirect to login after 2 seconds
-      setTimeout(() => {
-        logout()
-        window.location.href = '/login'
-      }, 2000)
-    } catch (err) {
-      setError(err.message || 'Failed to update email')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault()
@@ -321,7 +174,7 @@ export function Settings() {
               </div>
             </GlassCard>
 
-            {/* Email Update */}
+            {/* Email Display (Read-only) */}
             <GlassCard variant="elevated" className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Mail className="w-5 h-5 text-accent-primary" />
@@ -330,166 +183,26 @@ export function Settings() {
                     Email Address
                   </h2>
                   <p className="text-sm text-text-secondary">
-                    Update your email address
+                    Your account email
                   </p>
                 </div>
               </div>
 
-              {isOAuthUser ? (
-                <div className="p-4 rounded-lg bg-surface-muted border border-border">
-                  <p className="text-sm text-text-secondary">
-                    Your email is managed by {user.provider === 'google' ? 'Google' : 'GitHub'}. 
-                    To change your email, please update it in your {user.provider === 'google' ? 'Google' : 'GitHub'} account settings.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Step 1: Enter New Email */}
-                  {emailStep === 1 && (
-                    <form onSubmit={handleSendOTP} className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-text-primary" htmlFor="currentEmail">
-                          Current Email
-                        </label>
-                        <Input
-                          id="currentEmail"
-                          type="email"
-                          value={email}
-                          disabled
-                          className="bg-surface-muted"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-text-primary" htmlFor="newEmail">
-                          New Email
-                        </label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                          <Input
-                            id="newEmail"
-                            type="email"
-                            placeholder="Enter new email"
-                            value={newEmail}
-                            onChange={(e) => setNewEmail(e.target.value)}
-                            className="pl-10"
-                            required
-                            disabled={isSendingOTP}
-                          />
-                        </div>
-                      </div>
-
-                      <Button
-                        type="submit"
-                        size="lg"
-                        disabled={isSendingOTP || newEmail === email}
-                      >
-                        {isSendingOTP ? (
-                          <motion.div
-                            className="w-5 h-5 border-2 border-text-inverse/30 border-t-text-inverse rounded-full"
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                          />
-                        ) : (
-                          <>
-                            Send Verification Code
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </>
-                        )}
-                      </Button>
-                    </form>
-                  )}
-
-                  {/* Step 2: Verify OTP */}
-                  {emailStep === 2 && (
-                    <form onSubmit={handleVerifyOTP} className="space-y-4">
-                      {/* Email confirmation */}
-                      <div className="p-3 rounded-lg bg-accent-primaryMuted/50 border border-accent-primary/30 flex items-center gap-2 mb-4">
-                        <CheckCircle2 className="w-4 h-4 text-accent-primary flex-shrink-0" />
-                        <p className="text-sm text-accent-primary">
-                          Verification code sent to <strong>{newEmail}</strong>
-                        </p>
-                      </div>
-
-                      {/* OTP Input */}
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-text-primary" htmlFor="otp">
-                          Verification Code
-                        </label>
-                        <Input
-                          id="otp"
-                          type="text"
-                          placeholder="Enter 6-digit code"
-                          value={otp}
-                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="text-center text-2xl tracking-widest font-mono"
-                          required
-                          maxLength={6}
-                          disabled={isLoading}
-                        />
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-text-muted">
-                            {otpTimer > 0 ? (
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Code expires in {Math.floor(otpTimer / 60)}:{(otpTimer % 60).toString().padStart(2, '0')}
-                              </span>
-                            ) : (
-                              <span className="text-semantic-warning">Code expired</span>
-                            )}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={handleResendOTP}
-                            className="text-xs text-accent-primary hover:underline"
-                            disabled={isSendingOTP || otpTimer > 0}
-                          >
-                            Resend Code
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="flex-1"
-                          onClick={() => {
-                            setEmailStep(1)
-                            setOtp('')
-                            setOtpSent(false)
-                            setOtpTimer(0)
-                            setError('')
-                            setSuccess('')
-                          }}
-                          disabled={isLoading}
-                        >
-                          Change Email
-                        </Button>
-                        <Button
-                          type="submit"
-                          size="lg"
-                          className="flex-1"
-                          disabled={isLoading || otp.length !== 6}
-                        >
-                          {isLoading ? (
-                            <motion.div
-                              className="w-5 h-5 border-2 border-text-inverse/30 border-t-text-inverse rounded-full"
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            />
-                          ) : (
-                            <>
-                              <Save className="w-4 h-4 mr-2" />
-                              Verify & Update
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  )}
-                </>
-              )}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-text-primary" htmlFor="email">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={user?.email || ''}
+                  disabled
+                  className="bg-surface-muted"
+                />
+                <p className="text-xs text-text-muted">
+                  Email cannot be changed. {isOAuthUser && `Your email is managed by ${user.provider === 'google' ? 'Google' : 'GitHub'}.`}
+                </p>
+              </div>
             </GlassCard>
 
             {/* Password Update */}

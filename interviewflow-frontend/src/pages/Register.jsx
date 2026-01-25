@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
+import { User, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
@@ -11,104 +11,27 @@ import { API_BASE_URL } from '@/lib/utils'
 export function Register() {
   const navigate = useNavigate()
   const { register } = useAuth()
-  const [step, setStep] = useState(1) // 1: Email/OTP, 2: Verify OTP and complete registration
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [otp, setOtp] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isSendingOTP, setIsSendingOTP] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [otpTimer, setOtpTimer] = useState(0)
 
-  // Timer countdown
-  useEffect(() => {
-    if (otpTimer > 0) {
-      const timer = setInterval(() => {
-        setOtpTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-      return () => clearInterval(timer)
-    }
-  }, [otpTimer])
-
-  const handleSendOTP = async (e) => {
-    e.preventDefault()
-    setIsSendingOTP(true)
-    setError('')
-    setSuccess('')
-
-    // Validate email
-    if (!email || !email.trim()) {
-      setError('Email is required')
-      setIsSendingOTP(false)
-      return
-    }
-
-    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address')
-      setIsSendingOTP(false)
-      return
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        // Handle rate limiting (429 status)
-        if (response.status === 429) {
-          const retryAfter = data.retryAfter || 30
-          throw new Error(`${data.message || 'Email service is temporarily rate limited. Please wait'} (Retry after ${retryAfter} seconds)`)
-        }
-        
-        // Handle bad credentials (401 status) - Gmail App Password issue
-        if (response.status === 401 && data.errorType === 'bad_credentials') {
-          throw new Error(data.message || 'Gmail authentication failed. Please configure an App Password in your .env file.')
-        }
-        
-        throw new Error(data.message || 'Failed to send OTP')
-      }
-
-      setOtpSent(true)
-      setSuccess('OTP sent successfully! Check your email.')
-      setOtpTimer(600) // 10 minutes
-      setStep(2)
-      
-      // If OTP is provided in dev mode, show it
-      if (data.otp && process.env.NODE_ENV === 'development') {
-        console.log('🔑 Dev Mode OTP:', data.otp)
-        setSuccess(`OTP sent! (Dev Mode: ${data.otp})`)
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to send OTP. Please try again.')
-    } finally {
-      setIsSendingOTP(false)
-    }
-  }
-
-  const handleVerifyOTP = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
     setSuccess('')
 
-    // Validate all fields
+    // Validate fields
     if (!name || !name.trim()) {
       setError('Name is required')
+      setIsLoading(false)
+      return
+    }
+    if (!email || !email.trim()) {
+      setError('Email is required')
       setIsLoading(false)
       return
     }
@@ -117,23 +40,18 @@ export function Register() {
       setIsLoading(false)
       return
     }
-    if (!otp || otp.length !== 6) {
-      setError('Please enter the 6-digit OTP')
-      setIsLoading(false)
-      return
-    }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp, name, password })
+        body: JSON.stringify({ name, email, password })
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'OTP verification failed')
+        throw new Error(data.message || 'Registration failed')
       }
 
       // Store token and user data
@@ -146,43 +64,14 @@ export function Register() {
         }))
       }
 
-      setSuccess('Email verified! Account created successfully.')
+      setSuccess('Account created successfully!')
       setTimeout(() => {
         navigate('/setup')
       }, 1000)
     } catch (err) {
-      setError(err.message || 'OTP verification failed. Please try again.')
+      setError(err.message || 'Registration failed. Please try again.')
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleResendOTP = async () => {
-    setIsSendingOTP(true)
-    setError('')
-    setSuccess('')
-    setOtpTimer(0)
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to resend OTP')
-      }
-
-      setSuccess('New OTP sent! Check your email.')
-      setOtpTimer(600) // 10 minutes
-      setOtp('') // Clear previous OTP
-    } catch (err) {
-      setError(err.message || 'Failed to resend OTP. Please try again.')
-    } finally {
-      setIsSendingOTP(false)
     }
   }
 
@@ -249,184 +138,8 @@ export function Register() {
           )}
         </AnimatePresence>
 
-        {/* Step 1: Email and Send OTP */}
-        {step === 1 && (
-          <form onSubmit={handleSendOTP} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-primary" htmlFor="email">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                  disabled={isSendingOTP}
-                />
-              </div>
-              <p className="text-xs text-text-muted">
-                We'll send a verification code to this email
-              </p>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              disabled={isSendingOTP}
-            >
-              {isSendingOTP ? (
-                <motion.div
-                  className="w-5 h-5 border-2 border-text-inverse/30 border-t-text-inverse rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                />
-              ) : (
-                <>
-                  Send Verification Code
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </>
-              )}
-            </Button>
-          </form>
-        )}
-
-        {/* Step 2: Verify OTP and Complete Registration */}
-        {step === 2 && (
-          <form onSubmit={handleVerifyOTP} className="space-y-4">
-            {/* Email confirmation */}
-            <div className="p-3 rounded-lg bg-accent-primaryMuted/50 border border-accent-primary/30 flex items-center gap-2 mb-4">
-              <CheckCircle2 className="w-4 h-4 text-accent-primary flex-shrink-0" />
-              <p className="text-sm text-accent-primary">
-                Verification code sent to <strong>{email}</strong>
-              </p>
-            </div>
-
-            {/* OTP Input */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-primary" htmlFor="otp">
-                Verification Code
-              </label>
-              <Input
-                id="otp"
-                type="text"
-                placeholder="Enter 6-digit code"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="text-center text-2xl tracking-widest font-mono"
-                required
-                maxLength={6}
-                disabled={isLoading}
-              />
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-text-muted">
-                  {otpTimer > 0 ? (
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      Code expires in {Math.floor(otpTimer / 60)}:{(otpTimer % 60).toString().padStart(2, '0')}
-                    </span>
-                  ) : (
-                    <span className="text-semantic-warning">Code expired</span>
-                  )}
-                </p>
-                <button
-                  type="button"
-                  onClick={handleResendOTP}
-                  className="text-xs text-accent-primary hover:underline"
-                  disabled={isSendingOTP || otpTimer > 0}
-                >
-                  Resend Code
-                </button>
-              </div>
-            </div>
-
-            {/* Name Input */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-primary" htmlFor="name">
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-10"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Password Input */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-primary" htmlFor="password">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Create a strong password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                  minLength={6}
-                  disabled={isLoading}
-                />
-              </div>
-              <p className="text-xs text-text-muted">
-                Must be at least 6 characters
-              </p>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <motion.div
-                  className="w-5 h-5 border-2 border-text-inverse/30 border-t-text-inverse rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                />
-              ) : (
-                <>
-                  Verify & Create Account
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </>
-              )}
-            </Button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStep(1)
-                setOtp('')
-                setOtpSent(false)
-                setOtpTimer(0)
-              }}
-              className="text-sm text-text-secondary hover:text-text-primary text-center w-full"
-            >
-              ← Change email address
-            </button>
-          </form>
-        )}
-
-        {/* Legacy form (hidden) */}
-        {false && (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Registration Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-primary" htmlFor="name">
               Full Name
@@ -441,13 +154,14 @@ export function Register() {
                 onChange={(e) => setName(e.target.value)}
                 className="pl-10"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-primary" htmlFor="email">
-              Email
+              Email Address
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -459,6 +173,7 @@ export function Register() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -477,11 +192,12 @@ export function Register() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10"
                 required
-                minLength={8}
+                minLength={6}
+                disabled={isLoading}
               />
             </div>
             <p className="text-xs text-text-muted">
-              Must be at least 8 characters
+              Must be at least 6 characters
             </p>
           </div>
 
@@ -505,7 +221,6 @@ export function Register() {
             )}
           </Button>
         </form>
-        )}
 
         {/* Terms */}
         <p className="mt-4 text-xs text-text-muted text-center">
