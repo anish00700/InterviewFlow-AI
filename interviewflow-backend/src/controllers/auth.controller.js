@@ -17,19 +17,10 @@ const generateOTP = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// @desc    Send OTP for email verification (REMOVED - no longer needed)
+// @desc    Send OTP for email verification
 // @route   POST /api/auth/send-otp
 // @access  Public
 exports.sendOTP = async (req, res) => {
-    return res.status(410).json({ message: 'OTP verification has been removed. Please register directly using /api/auth/register' });
-};
-
-// @desc    Verify OTP (REMOVED - no longer needed)
-// @route   POST /api/auth/verify-otp
-// @access  Public
-exports.verifyOTP = async (req, res) => {
-    return res.status(410).json({ message: 'OTP verification has been removed. Please register directly using /api/auth/register' });
-};
     try {
         const { email } = req.body;
 
@@ -89,39 +80,8 @@ exports.verifyOTP = async (req, res) => {
             console.log(`✓ Registration OTP sent successfully to ${normalizedEmail}`);
         }).catch((emailError) => {
             console.error('✗ Registration OTP email sending failed (async):', emailError);
-            console.error('✗ Error details:', {
-                code: emailError.code,
-                message: emailError.message,
-                response: emailError.response,
-                responseCode: emailError.responseCode
-            });
-            
-            // Log error but don't fail the request since OTP is already saved
-            // User can request a new OTP if email doesn't arrive
-            
             // Always log OTP for debugging (especially useful when email fails)
             console.warn(`⚠ OTP for ${normalizedEmail} (email failed): ${otp}`);
-            console.warn(`⚠ Users can still verify with this OTP if they have it`);
-            
-            // Log specific error types for debugging
-            const isRateLimit = emailError.message?.includes('rate limit') || 
-                               emailError.message?.includes('rate limited');
-            const isConnectionTimeout = emailError.code === 'ETIMEDOUT' || 
-                                       emailError.code === 'ECONNRESET' ||
-                                       emailError.message?.includes('Connection timeout');
-            const isBadCredentials = emailError.message?.includes('BadCredentials') || 
-                                    emailError.message?.includes('Username and Password not accepted') ||
-                                    emailError.message?.includes('Email authentication failed');
-            
-            if (isConnectionTimeout) {
-                console.error('⚠ Connection timeout - Railway may be blocking SMTP. Check Railway logs.');
-            } else if (isRateLimit) {
-                console.warn('⚠ Email rate limited - user can retry after delay');
-            } else if (isBadCredentials) {
-                console.error('⚠ Email authentication failed - check SMTP credentials in Railway');
-            } else {
-                console.error('⚠ Email sending failed:', emailError.message);
-            }
         });
     } catch (error) {
         console.error('Send OTP error:', error);
@@ -129,7 +89,7 @@ exports.verifyOTP = async (req, res) => {
     }
 };
 
-// @desc    Verify OTP and complete registration
+// @desc    Verify OTP and create user
 // @route   POST /api/auth/verify-otp
 // @access  Public
 exports.verifyOTP = async (req, res) => {
@@ -233,71 +193,18 @@ exports.verifyOTP = async (req, res) => {
     }
 };
 
-// @desc    Register user
+// @desc    Register user (legacy - now requires OTP verification)
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
-
-        // Validate required fields
-        if (!name || !name.trim()) {
-            return res.status(400).json({ message: 'Name is required' });
-        }
-        if (!email || !email.trim()) {
-            return res.status(400).json({ message: 'Email is required' });
-        }
-        if (!password || password.length < 6) {
-            return res.status(400).json({ message: 'Password must be at least 6 characters long' });
-        }
-
-        // Normalize email (lowercase for consistency)
-        const normalizedEmail = email.trim().toLowerCase();
-
-        // Validate email format
-        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-        if (!emailRegex.test(normalizedEmail)) {
-            return res.status(400).json({ message: 'Please provide a valid email address' });
-        }
-
-        // Check if user already exists
-        const userExists = await User.findOne({ email: normalizedEmail });
-        if (userExists) {
-            return res.status(400).json({ message: 'User already exists with this email' });
-        }
-
-        // Create user
-        const user = await User.create({
-            name: name.trim(),
-            email: normalizedEmail,
-            password,
-            emailVerified: true, // No OTP verification needed
-            emailVerifiedAt: new Date()
-        });
-
-        if (user) {
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                emailVerified: user.emailVerified,
-                token: generateToken(user._id)
-            });
-        } else {
-            res.status(400).json({ message: 'Invalid user data' });
-        }
-    } catch (error) {
-        console.error('Register error:', error);
-        // Handle validation errors from Mongoose
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(err => err.message);
-            return res.status(400).json({ message: messages.join(', ') });
-        }
-        if (error.code === 11000) {
-            return res.status(400).json({ message: 'User already exists with this email' });
-        }
-        res.status(500).json({ message: error.message || 'Server error' });
-    }
+    // Redirect to new flow
+    return res.status(400).json({
+        message: 'Please use the email verification flow. Send OTP first, then verify.',
+        steps: [
+            '1. POST /api/auth/send-otp with { email }',
+            '2. POST /api/auth/verify-otp with { email, otp, name, password }'
+        ]
+    });
 };
 
 // @desc    Login user
@@ -403,28 +310,66 @@ exports.githubCallback = (req, res, next) => {
     })(req, res, next);
 };
 
-// @desc    Forgot password - send reset email (DISABLED - SMTP limit reached)
+// @desc    Forgot password - send reset email
 // @route   POST /api/auth/forgot-password
 // @access  Public
 exports.forgotPassword = async (req, res) => {
-    return res.status(503).json({ 
-        message: 'Forgot password functionality has been temporarily disabled due to SMTP service limits. Please contact support or try again later.',
-        reason: 'SMTP limit reached'
-    });
+    try {
+        const { email } = req.body;
+
+        if (!email || !email.trim()) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        // Check if user exists (but don't reveal if they don't for security)
+        const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+        if (!user) {
+            // Return success even if user doesn't exist (security best practice)
+            return res.status(200).json({
+                message: 'If an account exists with this email, a password reset link has been sent.'
+            });
+        }
+
+        // Check if user is OAuth-only (no password to reset)
+        if (user.provider !== 'local') {
+            return res.status(400).json({
+                message: 'This account was created with Google. Please sign in with Google instead.'
+            });
+        }
+
+        // Create reset token
+        const resetToken = await PasswordReset.createResetToken(email.trim().toLowerCase());
+
+        // Return response immediately (don't wait for email)
+        res.status(200).json({
+            message: 'If an account exists with this email, a password reset link has been sent.'
+        });
+
+        // Send reset email asynchronously (fire and forget)
+        const resetEmail = email.trim().toLowerCase();
+        console.log(`📧 Attempting to send password reset email to ${resetEmail}...`);
+        emailService.sendPasswordResetEmail(resetEmail, resetToken.token)
+            .then(() => {
+                console.log(`✓ Password reset email sent successfully to ${resetEmail}`);
+            })
+            .catch((emailError) => {
+                console.error('✗ Password reset email sending failed (async):', emailError);
+                // Delete the token if email fails
+                PasswordReset.deleteOne({ _id: resetToken._id }).catch(err => {
+                    console.error('Failed to delete reset token:', err);
+                });
+            });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ message: error.message || 'Server error' });
+    }
 };
 
-// @desc    Reset password with token (DISABLED - SMTP limit reached)
+// @desc    Reset password with token
 // @route   POST /api/auth/reset-password
 // @access  Public
 exports.resetPassword = async (req, res) => {
-    return res.status(503).json({ 
-        message: 'Password reset functionality has been temporarily disabled due to SMTP service limits. Please contact support or try again later.',
-        reason: 'SMTP limit reached'
-    });
-};
-
-// OLD CODE - DISABLED
-const _resetPassword_OLD = async (req, res) => {
     try {
         const { token, password } = req.body;
 
@@ -472,18 +417,179 @@ const _resetPassword_OLD = async (req, res) => {
     }
 };
 
-// @desc    Send OTP for email update verification (REMOVED - email editing disabled)
+// @desc    Send OTP for email update verification
 // @route   POST /api/auth/send-email-update-otp
 // @access  Private
 exports.sendEmailUpdateOTP = async (req, res) => {
-    return res.status(410).json({ message: 'Email editing has been disabled. Users can only change their password.' });
+    try {
+        const { email } = req.body;
+        const userId = req.user.id;
+
+        if (!email || !email.trim()) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        // Validate email format
+        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(email.trim())) {
+            return res.status(400).json({ message: 'Please provide a valid email address' });
+        }
+
+        const newEmail = email.trim().toLowerCase();
+
+        // Get current user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if OAuth-only
+        if (user.provider !== 'local') {
+            return res.status(400).json({
+                message: 'This account was created with Google. Please update your email in your Google account settings.'
+            });
+        }
+
+        // Check if email is the same
+        if (user.email === newEmail) {
+            return res.status(400).json({ message: 'This is already your current email address' });
+        }
+
+        // Check if email is already taken
+        const existingUser = await User.findOne({ 
+            email: newEmail,
+            _id: { $ne: userId }
+        });
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email is already in use' });
+        }
+
+        // Delete any existing unverified OTPs for this email update
+        await OTP.deleteMany({ email: newEmail, verified: false });
+
+        // Generate new OTP
+        const otp = generateOTP();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+        // Save OTP to database with userId for email update context
+        await OTP.create({
+            email: newEmail,
+            otp,
+            expiresAt,
+            userId: userId.toString() // Store userId to verify this is for email update
+        });
+
+        // Return response immediately (don't wait for email)
+        res.status(200).json({
+            message: 'Verification code sent to your new email address',
+            email: newEmail
+        });
+
+        // Send OTP via email asynchronously (fire and forget)
+        emailService.sendOTP(newEmail, otp).then(() => {
+            console.log(`✓ Email update OTP sent successfully to ${newEmail}`);
+        }).catch((emailError) => {
+            console.error('✗ Email sending failed (async):', emailError);
+        });
+    } catch (error) {
+        console.error('Send email update OTP error:', error);
+        res.status(500).json({ message: error.message || 'Server error' });
+    }
 };
 
-// @desc    Verify OTP and update email (REMOVED - email editing disabled)
+// @desc    Verify OTP and update email
 // @route   PUT /api/auth/update-email
 // @access  Private
 exports.updateEmail = async (req, res) => {
-    return res.status(410).json({ message: 'Email editing has been disabled. Users can only change their password.' });
+    try {
+        const { email, otp } = req.body;
+        const userId = req.user.id;
+
+        if (!email || !email.trim()) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        if (!otp) {
+            return res.status(400).json({ message: 'Verification code is required' });
+        }
+
+        const newEmail = email.trim().toLowerCase();
+
+        // Validate email format
+        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(newEmail)) {
+            return res.status(400).json({ message: 'Please provide a valid email address' });
+        }
+
+        // Get user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if OAuth-only
+        if (user.provider !== 'local') {
+            return res.status(400).json({
+                message: 'This account was created with Google. Please update your email in your Google account settings.'
+            });
+        }
+
+        // Verify OTP (check userId to ensure it's for this user's email update)
+        const otpRecord = await OTP.findOne({
+            email: newEmail,
+            otp: otp.trim(),
+            userId: userId.toString(),
+            verified: false,
+            expiresAt: { $gt: new Date() },
+            attempts: { $lt: 5 }
+        });
+
+        if (!otpRecord) {
+            // Increment attempts if OTP exists but is wrong
+            const existingOTP = await OTP.findOne({ email: newEmail, verified: false });
+            if (existingOTP) {
+                existingOTP.attempts += 1;
+                await existingOTP.save();
+            }
+            return res.status(400).json({
+                message: 'Invalid or expired verification code. Please request a new code.'
+            });
+        }
+
+        // Check if email is already taken (double-check)
+        const existingUser = await User.findOne({ 
+            email: newEmail,
+            _id: { $ne: userId }
+        });
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email is already in use' });
+        }
+
+        // Mark OTP as verified
+        otpRecord.verified = true;
+        await otpRecord.save();
+
+        // Update email
+        user.email = newEmail;
+        user.emailVerified = true; // Verified via OTP
+        user.emailVerifiedAt = new Date();
+        await user.save();
+
+        res.status(200).json({
+            message: 'Email updated successfully',
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                emailVerified: user.emailVerified
+            }
+        });
+    } catch (error) {
+        console.error('Update email error:', error);
+        res.status(500).json({ message: error.message || 'Server error' });
+    }
 };
 
 // @desc    Update user password
