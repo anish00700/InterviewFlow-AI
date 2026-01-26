@@ -6,10 +6,13 @@
 
 *Simulating real technical and behavioral interviews with hiring-grade evaluation reports*
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20App-brightgreen.svg)](https://interview-flow-ai-oewj.vercel.app/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green.svg)](https://www.mongodb.com/)
 [![License](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
+
+**🌐 [Live Application](https://interview-flow-ai-oewj.vercel.app/)**
 
 </div>
 
@@ -35,6 +38,8 @@
 ## 🎯 Overview
 
 **InterViewFlow AI** is not just a chatbot—it's an **AI Evaluation Engine** that simulates real technical and behavioral interviews. The system treats an interview as a **closed-loop reasoning pipeline**, dynamically adapting questions based on candidate performance and producing comprehensive, hiring-grade evaluation reports.
+
+**🌐 [Try it live](https://interview-flow-ai-oewj.vercel.app/)**
 
 ### Key Philosophy
 
@@ -448,6 +453,8 @@ This project is licensed under the ISC License.
 ---
 
 ## 🚀 Deployment
+
+**🌐 Live Application**: [https://interview-flow-ai-oewj.vercel.app/](https://interview-flow-ai-oewj.vercel.app/)
 
 For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
