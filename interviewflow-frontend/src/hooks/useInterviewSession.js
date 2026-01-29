@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { startInterview, streamAnswer } from '@/lib/api'
+import { startInterview, streamAnswer, completeInterview } from '@/lib/api'
 
 export function useInterviewSession(settings, navigate) {
     const [session, setSession] = useState(null)
@@ -45,6 +45,12 @@ export function useInterviewSession(settings, navigate) {
     // Timer countdown
     useEffect(() => {
         if (timeRemaining <= 0) {
+            // Time is up - mark interview as complete and generate report
+            if (session?.id) {
+                completeInterview(session.id).catch((err) => {
+                    console.error('Error completing interview on timeout:', err);
+                });
+            }
             navigate('/report', { state: { responses } })
             return
         }
@@ -54,10 +60,11 @@ export function useInterviewSession(settings, navigate) {
         }, 1000)
 
         return () => clearInterval(timer)
-    }, [timeRemaining])
+    }, [timeRemaining, session?.id])
 
     const submitCurrentAnswer = async () => {
-        if (!answer.trim() || isSubmitting) return
+        // Only allow submit when we are on the question stage and not already submitting
+        if (!answer.trim() || isSubmitting || activeStage !== 'question') return
 
         setIsSubmitting(true)
         setError(null) // Clear previous errors
@@ -105,7 +112,7 @@ export function useInterviewSession(settings, navigate) {
     /**
      * Move to the next question manually (called when user clicks "Next Question" button)
      */
-    const moveToNextQuestion = () => {
+    const moveToNextQuestion = async () => {
         if (!latestFeedback) return;
 
         const nextQ = latestFeedback.nextQuestion;
@@ -123,7 +130,15 @@ export function useInterviewSession(settings, navigate) {
             setActiveStage('question')
             setLatestFeedback(null)
         } else {
-            // Interview is complete, navigate to report
+            // Interview is complete, tell backend to finalize and generate report
+            if (session?.id) {
+                try {
+                    await completeInterview(session.id)
+                } catch (err) {
+                    console.error('Error completing interview:', err);
+                }
+            }
+            // Then navigate to report using in-memory responses
             navigate('/report', { state: { responses } })
         }
     }

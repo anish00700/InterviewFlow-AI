@@ -21,7 +21,35 @@ class InterviewService {
      * Initializes the cognitive state and generates the first question
      */
     async startInterview(settings, userId = null) {
-        const { skills, difficulty, duration, role } = settings;
+        const { skills, difficulty, duration, role, resumeTopics, mode } = settings;
+
+        // Normalize arrays
+        const normalizedSkills = Array.isArray(skills) ? skills : [];
+        const normalizedResumeTopics = Array.isArray(resumeTopics) ? resumeTopics : [];
+
+        // Determine combined skills list based on mode
+        let allSkills;
+        switch (mode) {
+            case 'resume_only':
+                allSkills = normalizedResumeTopics.length > 0
+                    ? normalizedResumeTopics
+                    : normalizedSkills;
+                break;
+            case 'mixed':
+                allSkills = Array.from(
+                    new Set([...normalizedSkills, ...normalizedResumeTopics])
+                );
+                break;
+            case 'skills':
+            default:
+                allSkills = normalizedSkills;
+                break;
+        }
+
+        // Safety: if somehow empty, fall back to original skills
+        if (!allSkills || allSkills.length === 0) {
+            allSkills = normalizedSkills;
+        }
 
         // Determine experience level from difficulty
         const experienceLevel = this._mapDifficultyToLevel(difficulty);
@@ -60,11 +88,12 @@ class InterviewService {
         // Use experienceLevel (mapped from difficulty) for proper difficulty scaling
         const context = {
             role: role || 'Software Engineer',
-            skill: skills[0] || 'General',
+            skill: allSkills[0] || 'General',
             level: experienceLevel, // Use mapped experience level for proper difficulty
             previousQuestions: [],
             weakAreas: [],
-            strongAreas: []
+            strongAreas: [],
+            allSkills, // Pass full list of skills/topics to question block
         };
 
         // 3. Generate First Question (no adaptation needed yet)
@@ -78,7 +107,7 @@ class InterviewService {
             experienceLevel,
             status: 'active',
             settings: {
-                skills,
+                skills: allSkills,
                 difficulty,
                 duration,
                 role: role || 'Software Engineer',

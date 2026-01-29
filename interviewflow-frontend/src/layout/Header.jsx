@@ -9,6 +9,8 @@ import { useAuth } from '@/lib/AuthContext'
 const navItems = [
   { path: '/', label: 'Home' },
   { path: '/setup', label: 'Practice' },
+  { path: '/history', label: 'History' },
+  { path: '/resume-ats', label: 'Resume ATS' },
   { path: '/report', label: 'Reports' },
 ]
 

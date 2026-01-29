@@ -71,7 +71,9 @@ export function Home() {
               </Link>
             </Button>
             <Button variant="secondary" size="lg" asChild>
-              <Link to="/report">View Sample Report</Link>
+              <Link to="/sample-report">
+                View Sample Report
+              </Link>
             </Button>
           </div>
         </motion.div>

@@ -2,7 +2,19 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from '@/lib/AuthContext'
 import { ProtectedRoute } from '@/components/shared'
 import { AppShell, AuthShell, InterviewShell } from '@/layout'
-import { Home, Login, Register, Setup, Interview, Report, ForgotPassword, ResetPassword, Settings } from '@/pages'
+import {
+  Home,
+  Login,
+  Register,
+  Setup,
+  Interview,
+  Report,
+  ResumeATS,
+  History,
+  ForgotPassword,
+  ResetPassword,
+  Settings,
+} from '@/pages'
 import { AuthCallback } from '@/pages/AuthCallback'
 
 function App() {
@@ -37,12 +49,30 @@ function App() {
             <Route element={<AppShell />}>
               {/* Home is public */}
               <Route path="/" element={<Home />} />
-              {/* Setup and Report are protected */}
+              {/* Public sample report */}
+              <Route path="/sample-report" element={<Report />} />
+              {/* Setup, ATS, history, and real reports are protected */}
               <Route
                 path="/setup"
                 element={
                   <ProtectedRoute>
                     <Setup />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/resume-ats"
+                element={
+                  <ProtectedRoute>
+                    <ResumeATS />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <ProtectedRoute>
+                    <History />
                   </ProtectedRoute>
                 }
               />

@@ -32,8 +32,18 @@ export function Interview() {
     maxQuestions,
     submitAnswer,
     moveToNextQuestion,
-    canMoveToNext
+    canMoveToNext,
   } = useInterviewSession(settings, navigate)
+
+  const handleEndInterview = () => {
+    // If there are no responses yet, don't show a demo/empty report
+    if (!responses || responses.length === 0) {
+      navigate('/setup')
+      return
+    }
+
+    navigate('/report', { state: { responses } })
+  }
 
   const stages = PIPELINE_STAGES.filter((s) =>
     ['question', 'memory', 'evaluation', 'feedback'].includes(s.id)
@@ -79,11 +89,7 @@ export function Interview() {
             ))}
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/report', { state: { responses } })}
-          >
+          <Button variant="ghost" size="sm" onClick={handleEndInterview}>
             End Interview
           </Button>
         </div>

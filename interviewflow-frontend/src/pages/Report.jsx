@@ -23,8 +23,88 @@ export function Report() {
   const reportRef = useRef(null)
   const [isExporting, setIsExporting] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
-  const responses = location.state?.responses || []
+  const isSample = location.state?.sample === true
+    || location.pathname === '/sample-report'
+
+  // Sample responses for demo report
+  const sampleResponses = [
+    {
+      question: {
+        text: 'Explain how React\'s reconciliation algorithm works and how it impacts performance.',
+      },
+      answer:
+        'React uses a virtual DOM and a diffing algorithm to determine the minimal set of changes to apply to the real DOM. It compares previous and next virtual trees, using heuristics like key-based reconciliation to optimize list updates. This reduces direct DOM mutations, which are expensive, and allows React to batch and prioritize updates.',
+      result: {
+        scores: {
+          clarity: 88,
+          coherence: 90,
+          depth: 84,
+          communication: 86,
+          overall: 87,
+        },
+        detailed_evaluation: {
+          strengths: [
+            'Explained reconciliation at a conceptual level with correct terminology.',
+            'Highlighted performance implications and why virtual DOM exists.',
+          ],
+          improvement_feedback: [
+            'Could add an example of keyed vs unkeyed list rendering to make the explanation more concrete.',
+          ],
+          mistakes: [],
+          missing_points: ['Did not mention React Fiber or scheduling/prioritization explicitly.'],
+        },
+      },
+    },
+    {
+      question: {
+        text: 'Design a simple REST API for a todo application. Describe endpoints, data model, and error handling.',
+      },
+      answer:
+        'I would create /todos for listing and creating tasks, /todos/:id for reading, updating, and deleting. Each todo has id, title, description, completed, and timestamps. I would use proper status codes, validate input, and return JSON error messages with clear codes and messages.',
+      result: {
+        scores: {
+          clarity: 80,
+          coherence: 78,
+          depth: 72,
+          communication: 82,
+          overall: 78,
+        },
+        detailed_evaluation: {
+          strengths: ['Good coverage of CRUD endpoints and basic fields.'],
+          improvement_feedback: [
+            'Add pagination/filtering to the list endpoint.',
+            'Describe authentication/authorization considerations briefly.',
+          ],
+          mistakes: [],
+          missing_points: ['No mention of idempotency or handling concurrent updates.'],
+        },
+      },
+    },
+  ]
+
+  const responses = isSample ? sampleResponses : location.state?.responses || []
   const interviewId = location.state?.interviewId || null
+
+  // If there are no responses and not a sample, avoid showing a demo report
+  if (!responses || responses.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        <GlassCard padding="lg" className="text-center">
+          <h1 className="font-serif text-2xl font-semibold text-text-primary mb-3">
+            No Interview Data Found
+          </h1>
+          <p className="text-text-secondary text-sm mb-6">
+            We couldn&apos;t find any completed interview responses for this session.
+            Please start a new interview to generate a report.
+          </p>
+          <Button size="lg" onClick={() => navigate('/setup')}>
+            Back to Setup
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </GlassCard>
+      </div>
+    )
+  }
 
   // Calculate aggregate scores
   const aggregateScores = responses.reduce(
@@ -48,11 +128,43 @@ export function Report() {
         depth: Math.round(aggregateScores.depth / aggregateScores.count),
         communication: Math.round(aggregateScores.communication / aggregateScores.count),
       }
-    : { clarity: 78, coherence: 82, depth: 75, communication: 85 } // Demo data
+    : { clarity: 0, coherence: 0, depth: 0, communication: 0 }
 
   const overallScore = Math.round(
     (avgScores.clarity + avgScores.coherence + avgScores.depth + avgScores.communication) / 4
   )
+
+  // Derive strengths and improvement points from actual evaluation data
+  const aggregatedInsights = responses.reduce(
+    (acc, r) => {
+      const evalData = r.result?.detailed_evaluation || r.result || {}
+
+      if (Array.isArray(evalData.strengths)) {
+        evalData.strengths.forEach((s) => acc.strengths.push(s))
+      }
+
+      if (Array.isArray(evalData.improvement_feedback)) {
+        evalData.improvement_feedback.forEach((f) => acc.improvements.push(f))
+      }
+
+      if (Array.isArray(evalData.missing_points)) {
+        evalData.missing_points.forEach((m) => acc.improvements.push(m))
+      }
+
+      if (Array.isArray(evalData.mistakes)) {
+        evalData.mistakes.forEach((m) => acc.improvements.push(m))
+      }
+
+      return acc
+    },
+    { strengths: [], improvements: [] }
+  )
+
+  const unique = (arr, max = 5) =>
+    Array.from(new Set(arr.map((s) => String(s).trim()).filter(Boolean))).slice(0, max)
+
+  const strengthItems = unique(aggregatedInsights.strengths, 6)
+  const improvementItems = unique(aggregatedInsights.improvements, 6)
 
   const getScoreColor = (score) => {
     if (score >= 85) return 'text-semantic-success'
@@ -290,10 +402,12 @@ export function Report() {
           </div>
           <div>
             <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-text-primary">
-              Interview Complete
+              {isSample ? 'Sample Interview Report' : 'Interview Complete'}
             </h1>
             <p className="text-text-secondary text-sm">
-              Here's your performance analysis
+              {isSample
+                ? 'This is a sample report to show the kind of feedback you will receive after a real interview.'
+                : "Here's your performance analysis"}
             </p>
           </div>
         </div>
@@ -365,7 +479,7 @@ export function Report() {
         </div>
       </motion.section>
 
-      {/* Strengths & Improvements */}
+      {/* Strengths & Improvements (derived from real answers) */}
       <div className="grid md:grid-cols-2 gap-4 mb-8">
         <motion.section
           initial={{ opacity: 0, x: -16 }}
@@ -380,30 +494,27 @@ export function Report() {
               <h3 className="font-medium text-text-primary leading-none">Strengths</h3>
             </div>
             <ul className="space-y-2.5">
-              <li className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-white" fill="currentColor" />
-                </div>
-                <span className="text-sm text-text-secondary leading-relaxed">
-                  Clear articulation of complex technical concepts
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-white" fill="currentColor" />
-                </div>
-                <span className="text-sm text-text-secondary leading-relaxed">
-                  Structured approach to problem decomposition
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-white" fill="currentColor" />
-                </div>
-                <span className="text-sm text-text-secondary leading-relaxed">
-                  Good awareness of trade-offs and considerations
-                </span>
-              </li>
+              {strengthItems.length > 0 ? (
+                strengthItems.map((item, idx) => (
+                  <li key={idx} className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white" fill="currentColor" />
+                    </div>
+                    <span className="text-sm text-text-secondary leading-relaxed">
+                      {item}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-white" fill="currentColor" />
+                  </div>
+                  <span className="text-sm text-text-secondary leading-relaxed">
+                    Strengths will appear here once you complete more answers.
+                  </span>
+                </li>
+              )}
             </ul>
           </GlassCard>
         </motion.section>
@@ -421,24 +532,24 @@ export function Report() {
               <h3 className="font-medium text-text-primary leading-none">Areas to Improve</h3>
             </div>
             <ul className="space-y-2.5">
-              <li className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-semantic-warning flex-shrink-0" />
-                <span className="text-sm text-text-secondary leading-relaxed">
-                  Include more real-world examples from experience
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-semantic-warning flex-shrink-0" />
-                <span className="text-sm text-text-secondary leading-relaxed">
-                  Practice time-boxing responses for efficiency
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-semantic-warning flex-shrink-0" />
-                <span className="text-sm text-text-secondary leading-relaxed">
-                  Anticipate and address follow-up questions proactively
-                </span>
-              </li>
+              {improvementItems.length > 0 ? (
+                improvementItems.map((item, idx) => (
+                  <li key={idx} className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full bg-semantic-warning flex-shrink-0" />
+                    <span className="text-sm text-text-secondary leading-relaxed">
+                      {item}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-semantic-warning flex-shrink-0" />
+                  <span className="text-sm text-text-secondary leading-relaxed">
+                    Actionable improvement suggestions will appear here once the AI has more
+                    signal from your answers.
+                  </span>
+                </li>
+              )}
             </ul>
           </GlassCard>
         </motion.section>
@@ -528,7 +639,7 @@ export function Report() {
           </div>
           <Button size="lg" asChild>
             <Link to="/setup">
-              Practice Again
+              {isSample ? 'Practice Now' : 'Practice Again'}
               <ArrowRight className="w-4 h-4 ml-1" />
             </Link>
           </Button>

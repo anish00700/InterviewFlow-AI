@@ -72,6 +72,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/interview', require('./routes/interview.routes'));
 app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/resume', require('./routes/resume.routes'));
 
 // Health check
 app.get('/health', (req, res) => {
