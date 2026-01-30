@@ -1,6 +1,7 @@
-import { useLocation, Link, useNavigate } from 'react-router-dom'
+import { useLocation, Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { getReportByInterviewId } from '@/lib/api'
 import {
   Trophy,
   TrendingUp,
@@ -17,14 +18,72 @@ import { GlassCard } from '@/components/shared'
 import { TRANSITIONS } from '@/lib/constants'
 import { cn, staggerDelay } from '@/lib/utils'
 
+// Map backend history turn to frontend response shape (scores 0-100, detailed_evaluation)
+function turnToResponse(turn) {
+  const ev = turn.evaluation || {}
+  return {
+    question: {
+      text: turn.question?.text || turn.question?.question_text || 'Question',
+      ...turn.question,
+    },
+    answer: turn.answer || '',
+    result: {
+      scores: {
+        clarity: Math.round((ev.clarity_score ?? 5) * 10),
+        coherence: Math.round((ev.relevance_score ?? 5) * 10),
+        depth: Math.round((ev.depth_score ?? 5) * 10),
+        communication: Math.round((ev.confidence_score ?? 5) * 10),
+        overall: Math.round((ev.overall_score ?? 5) * 10),
+      },
+      detailed_evaluation: {
+        strengths: ev.strengths || [],
+        improvement_feedback: ev.improvement_feedback || [],
+        mistakes: ev.mistakes || [],
+        missing_points: ev.missing_points || [],
+      },
+    },
+  }
+}
+
 export function Report() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { interviewId: interviewIdParam } = useParams()
   const reportRef = useRef(null)
   const [isExporting, setIsExporting] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
+  const [loadedResponses, setLoadedResponses] = useState(null)
+  const [loadError, setLoadError] = useState(null)
+  const [loadingReport, setLoadingReport] = useState(false)
   const isSample = location.state?.sample === true
     || location.pathname === '/sample-report'
+
+  // Load report by interview id when visiting /report/:interviewId
+  useEffect(() => {
+    const id = interviewIdParam || location.state?.interviewId
+    if (!id || location.state?.responses || isSample) {
+      setLoadedResponses(null)
+      return
+    }
+    let mounted = true
+    setLoadingReport(true)
+    setLoadError(null)
+    getReportByInterviewId(id)
+      .then((data) => {
+        if (!mounted) return
+        const history = data.history || []
+        setLoadedResponses(history.map(turnToResponse))
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setLoadError(err.message || 'Failed to load report')
+        setLoadedResponses([])
+      })
+      .finally(() => {
+        if (mounted) setLoadingReport(false)
+      })
+    return () => { mounted = false }
+  }, [interviewIdParam, location.state?.interviewId, location.state?.responses, isSample])
 
   // Sample responses for demo report
   const sampleResponses = [
@@ -82,8 +141,40 @@ export function Report() {
     },
   ]
 
-  const responses = isSample ? sampleResponses : location.state?.responses || []
-  const interviewId = location.state?.interviewId || null
+  const responsesFromState = location.state?.responses
+  const responses = isSample
+    ? sampleResponses
+    : (loadedResponses !== null ? loadedResponses : responsesFromState || [])
+  const interviewId = interviewIdParam || location.state?.interviewId || null
+
+  // Loading report by id
+  if (interviewIdParam && loadingReport) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        <GlassCard padding="lg" className="text-center">
+          <p className="text-text-secondary">Loading report…</p>
+        </GlassCard>
+      </div>
+    )
+  }
+
+  // Error loading report by id
+  if (interviewIdParam && loadError) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        <GlassCard padding="lg" className="text-center">
+          <h1 className="font-serif text-2xl font-semibold text-text-primary mb-3">
+            Could Not Load Report
+          </h1>
+          <p className="text-text-secondary text-sm mb-6">{loadError}</p>
+          <Button size="lg" onClick={() => navigate('/history')}>
+            Back to History
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </GlassCard>
+      </div>
+    )
+  }
 
   // If there are no responses and not a sample, avoid showing a demo report
   if (!responses || responses.length === 0) {

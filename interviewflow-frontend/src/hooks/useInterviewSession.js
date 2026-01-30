@@ -116,12 +116,15 @@ export function useInterviewSession(settings, navigate) {
         if (!latestFeedback) return;
 
         const nextQ = latestFeedback.nextQuestion;
-        
-        // Check if interview is complete (from backend or by question count)
-        const backendComplete = latestFeedback.isComplete === true;
+
+        // Check if interview is complete purely by local rules:
+        // - No next question returned
+        // - OR we've reached the configured question limit
+        // We intentionally ignore backend isComplete flags so that
+        // 10-minute sessions always ask ~5 questions, 20-minute ~7, etc.
         const questionLimit = maxQuestions || 7; // Fallback to 7 if not set
         const reachedLimit = responses.length >= questionLimit;
-        const isFinished = backendComplete || !nextQ || reachedLimit;
+        const isFinished = !nextQ || reachedLimit;
 
         if (!isFinished && nextQ) {
             // Move to next question

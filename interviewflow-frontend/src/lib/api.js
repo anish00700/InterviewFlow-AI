@@ -188,5 +188,29 @@ export async function completeInterview(interviewId) {
   }
 }
 
+/**
+ * Get report and history for an interview (for viewing report by id from History)
+ */
+export async function getReportByInterviewId(interviewId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/interview/${interviewId}/report`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to fetch report' }));
+      throw new Error(errorData.message || 'Failed to fetch report');
+    }
+
+    return await response.json(); // { report, history, interview }
+  } catch (error) {
+    console.error('Get report by interview id API error:', error);
+    throw error;
+  }
+}
+
 
 

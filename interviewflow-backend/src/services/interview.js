@@ -176,7 +176,23 @@ class InterviewService {
             difficulty: interview.settings.difficulty
         };
 
-        const { settings, context, cognitiveState } = interview;
+        const { settings, context } = interview;
+        // Ensure cognitive state exists (e.g. for docs created before cognitiveState was added)
+        if (!interview.cognitiveState) {
+            interview.cognitiveState = {
+                currentDifficulty: 'same',
+                performanceTrend: 'stable',
+                conceptMastery: new Map(),
+                confidenceTrend: [],
+                clarityTrend: [],
+                detectedStrengths: [],
+                detectedWeaknesses: [],
+                communicationProfile: { clarity: 0, structure: 0, completeness: 0, consistency: 0 },
+                reasoningQuality: { average: 0, trend: 'stable' },
+                learningCurve: { slope: 0, variance: 0, cognitiveLoad: 0, trend: 'stable' }
+            };
+        }
+        const cognitiveState = interview.cognitiveState;
         const turnNumber = interview.totalTurns + 1;
 
         // 2. Evaluate Answer (Multi-dimensional analysis)
@@ -227,8 +243,8 @@ class InterviewService {
             null // Will be updated after adaptation
         );
 
-        // 5. Update Cognitive State
-        this._updateCognitiveState(interview, evaluation, turnNumber);
+        // 5. Update Cognitive State (including concept mastery from this turn)
+        this._updateCognitiveState(interview, evaluation, currentQ, turnNumber);
 
         // 6. Compute Analytics
         const fullHistory = await memoryService.getHistory(interviewId);
@@ -258,6 +274,16 @@ class InterviewService {
         });
 
         interview.consistencyScore = analytics.consistency.score;
+
+        // Sync learning curve from analytics into cognitive state so adaptation sees real data
+        if (analytics.learningCurve && interview.cognitiveState) {
+            interview.cognitiveState.learningCurve = {
+                slope: analytics.learningCurve.slope ?? 0,
+                variance: analytics.learningCurve.variance ?? 0,
+                cognitiveLoad: analytics.learningCurve.cognitiveLoad ?? 0,
+                trend: analytics.learningCurve.trend || 'stable'
+            };
+        }
 
         // 8. Adaptive Control Logic - Decide Next Strategy
         const roleContext = {
@@ -368,6 +394,10 @@ class InterviewService {
         
         if (isComplete) {
             interview.status = 'completed';
+            interview.completedAt = new Date();
+            // Set overall score from analytics so history shows it even before completeInterview
+            const overall = analytics.dimensionScores?.overall;
+            interview.overallScore = overall != null ? Math.round(overall * 10) : null;
         }
 
         await interview.save();
@@ -471,8 +501,9 @@ class InterviewService {
     /**
      * Update cognitive state after each evaluation
      */
-    _updateCognitiveState(interview, evaluation, turnNumber) {
-        const { cognitiveState } = interview;
+    _updateCognitiveState(interview, evaluation, currentQ, turnNumber) {
+        const cognitiveState = interview.cognitiveState;
+        if (!cognitiveState) return;
 
         // Update confidence and clarity trends
         if (evaluation.confidence_score !== undefined) {
@@ -529,10 +560,20 @@ class InterviewService {
             });
         }
 
-        // Update concept mastery (if question had expected concepts)
-        // This would be updated from the question's expected_concepts
-
-        interview.cognitiveState = cognitiveState;
+        // Update concept mastery from this question's expected_concepts and evaluation score
+        const concepts = (currentQ && currentQ.expected_concepts) ? currentQ.expected_concepts : [];
+        const score = evaluation.overall_score != null ? evaluation.overall_score : 5;
+        if (concepts.length > 0) {
+            const map = cognitiveState.conceptMastery;
+            if (!map || typeof map.set !== 'function') {
+                cognitiveState.conceptMastery = new Map(Object.entries(map || {}));
+            }
+            concepts.forEach(concept => {
+                const existing = cognitiveState.conceptMastery.get(concept);
+                const next = existing != null ? (existing + score) / 2 : score;
+                cognitiveState.conceptMastery.set(concept, Math.round(next * 10) / 10);
+            });
+        }
     }
 
     /**

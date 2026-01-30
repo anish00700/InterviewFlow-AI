@@ -101,7 +101,13 @@ export function History() {
                 : null
 
             return (
-              <GlassCard key={item.id} hover padding="md">
+              <GlassCard
+                key={item.id}
+                hover
+                padding="md"
+                className="cursor-pointer transition-opacity hover:opacity-95"
+                onClick={() => navigate(`/report/${item.id}`)}
+              >
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
@@ -156,7 +162,7 @@ export function History() {
                         {item.overallScore != null ? getScoreLabel(item.overallScore) : 'Pending'}
                       </div>
                     </div>
-                    {item.verdict && (
+                    {item.verdict && item.verdict !== 'Pending' && (
                       <Badge
                         variant="secondary"
                         className={cn(
@@ -171,6 +177,9 @@ export function History() {
                         {item.verdict}
                       </Badge>
                     )}
+                    <span className="text-xs text-accent-primary font-medium">
+                      View report →
+                    </span>
                   </div>
                 </div>
               </GlassCard>

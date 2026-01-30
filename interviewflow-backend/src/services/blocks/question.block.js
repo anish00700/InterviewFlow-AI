@@ -84,7 +84,7 @@ class QuestionBlock {
         Performance Trend: ${performanceTrend}
         Detected Strengths: ${detectedStrengths?.map(s => s.concept).join(', ') || 'None yet'}
         Detected Weaknesses: ${detectedWeaknesses?.map(w => w.concept).join(', ') || 'None yet'}
-        Concept Mastery Map: ${JSON.stringify(Object.fromEntries(conceptMastery || new Map()))}
+        Concept Mastery Map: ${JSON.stringify(conceptMastery && typeof conceptMastery.entries === 'function' ? Object.fromEntries(conceptMastery) : (conceptMastery || {}))}
             `;
         }
 
@@ -102,9 +102,10 @@ class QuestionBlock {
             ? `Previous questions used ${previousQuestions.length} different question(s).`
             : 'This is the first question.';
 
-        // Get all tested concepts to avoid repetition
-        const testedConceptsList = cognitiveState?.conceptMastery 
-            ? Array.from(cognitiveState.conceptMastery.keys()).join(', ')
+        // Get all tested concepts to avoid repetition (support both Map and plain object from DB)
+        const cm = cognitiveState?.conceptMastery;
+        const testedConceptsList = cm
+            ? (typeof cm.keys === 'function' ? Array.from(cm.keys()) : Object.keys(cm)).join(', ')
             : 'None yet';
 
         const prompt = `

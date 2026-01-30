@@ -147,11 +147,12 @@ class AdaptationBlock {
             learningCurve
         } = cognitiveState;
 
+        const lc = learningCurve || {};
         let summary = `
         Performance Trend: ${performanceTrend}
         Current Difficulty Setting: ${currentDifficulty}
-        Learning Curve Slope: ${learningCurve.slope || 0} (positive = improving)
-        Learning Curve Variance: ${learningCurve.variance || 0} (lower = more consistent)
+        Learning Curve Slope: ${lc.slope ?? 0} (positive = improving)
+        Learning Curve Variance: ${lc.variance ?? 0} (lower = more consistent)
         `;
 
         if (confidenceTrend && confidenceTrend.length > 0) {

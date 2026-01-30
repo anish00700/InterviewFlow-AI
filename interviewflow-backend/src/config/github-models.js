@@ -16,7 +16,8 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 // Note: These are common model identifiers - actual available models may vary
 // The system will try to discover available models from the catalog API
 const MODEL_PRIORITY = [
-    'openai/gpt-4o',                   // OpenAI GPT-4o (commonly available)
+    'openai/gpt-4o',                   // OpenAI GPT-4o (default)
+    'openai/gpt-4o-mini',              // OpenAI GPT-4o mini (fallback)
     'openai/gpt-4-turbo',              // OpenAI GPT-4 Turbo
     'anthropic/claude-3-5-sonnet',     // Claude 3.5 Sonnet
     'anthropic/claude-3-opus',         // Claude 3 Opus
@@ -27,7 +28,7 @@ const MODEL_PRIORITY = [
     // Add other models as needed
 ];
 
-// Default model - use a commonly available model
+// Default model - GPT-4o
 const DEFAULT_MODEL = process.env.GITHUB_MODEL || 'openai/gpt-4o';
 
 // Determine which model to use

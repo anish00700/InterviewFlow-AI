@@ -1,4 +1,6 @@
 const interviewService = require('../services/interview');
+const reportService = require('../services/report');
+const memoryService = require('../services/memory');
 const Interview = require('../models/Interview');
 const Report = require('../models/Report');
 
@@ -26,7 +28,8 @@ exports.startInterview = async (req, res) => {
             });
         }
 
-        const session = await interviewService.startInterview(req.body);
+        const userId = req.user?._id || req.user?.id;
+        const session = await interviewService.startInterview(req.body, userId);
         res.status(201).json(session);
     } catch (error) {
         console.error('Error starting interview:', error);
@@ -150,7 +153,26 @@ exports.completeInterview = async (req, res) => {
             return res.status(403).json({ message: 'You do not have access to this interview' });
         }
 
-        const reportData = await interviewService.endInterview(interviewId);
+        let reportData = null;
+        try {
+            reportData = await interviewService.endInterview(interviewId);
+        } catch (err) {
+            console.error('Error generating report in completeInterview:', err);
+            // Still mark interview as completed and set score so history is correct
+            interview.status = 'completed';
+            if (!interview.completedAt) interview.completedAt = new Date();
+            if (interview.overallScore == null && interview.dimensionScores) {
+                const dims = interview.dimensionScores;
+                const avg = (dims.clarity + dims.confidence + dims.depth + dims.relevance + dims.correctness + dims.reasoning) / 6;
+                interview.overallScore = Math.round((avg || 0) * 10);
+            }
+            await interview.save();
+            return res.status(200).json({
+                message: 'Interview marked completed; report generation failed. You can view the summary in History.',
+                overallScore: interview.overallScore,
+                report: null
+            });
+        }
 
         res.status(200).json({
             message: 'Interview completed and report generated',
@@ -161,6 +183,51 @@ exports.completeInterview = async (req, res) => {
         console.error('Error completing interview:', error);
         const message = error.message || 'Failed to complete interview and generate report.';
         res.status(500).json({ message });
+    }
+};
+
+// @desc    Get report and history for an interview (for viewing report by id)
+// @route   GET /api/interview/:id/report
+// @access  Private
+exports.getReportByInterviewId = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const interviewId = req.params.id;
+        if (!interviewId) {
+            return res.status(400).json({ message: 'Interview ID is required' });
+        }
+
+        const interview = await Interview.findById(interviewId).lean();
+        if (!interview) {
+            return res.status(404).json({ message: 'Interview not found' });
+        }
+
+        if (interview.userId && interview.userId.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'You do not have access to this interview' });
+        }
+
+        const report = await reportService.getReport(interviewId);
+        const history = await memoryService.getHistory(interviewId);
+
+        // Return report doc (with jsonReport) and history so frontend can build the report view
+        const reportObj = report ? (report.toObject ? report.toObject() : report) : null;
+        res.status(200).json({
+            report: reportObj,
+            history: (history || []).map((t) => ({
+                question: t.question,
+                answer: t.answer,
+                evaluation: t.evaluation,
+                turnNumber: t.turnNumber
+            })),
+            interview: { id: interview._id, role: interview.role, experienceLevel: interview.experienceLevel, settings: interview.settings }
+        });
+    } catch (error) {
+        console.error('Error fetching report by interview id:', error);
+        res.status(500).json({ message: error.message || 'Failed to fetch report' });
     }
 };
 

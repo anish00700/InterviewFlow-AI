@@ -1,7 +1,9 @@
+import { useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send } from 'lucide-react'
+import { Send, Mic, Square } from 'lucide-react'
 import { Button, Badge, Textarea } from '@/components/ui'
 import { GlassCard } from '@/components/shared'
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 
 export function QuestionBlock({
     question,
@@ -11,6 +13,23 @@ export function QuestionBlock({
     isSubmitting,
     onSubmit,
 }) {
+    const onSpeechResult = useCallback((transcript, isInterim) => {
+        if (!isInterim) setAnswer((prev) => (prev ? `${prev} ${transcript}` : transcript))
+    }, [setAnswer])
+
+    const {
+        isSupported: isSpeechSupported,
+        isListening,
+        error: speechError,
+        startListening,
+        stopListening,
+    } = useSpeechRecognition({ onResult: onSpeechResult })
+
+    const toggleMic = () => {
+        if (isListening) stopListening()
+        else startListening()
+    }
+
     return (
         <GlassCard variant="elevated" className="min-h-96">
             <AnimatePresence mode="wait">
@@ -29,13 +48,49 @@ export function QuestionBlock({
                         </h2>
 
                         <div className="space-y-4">
-                            <Textarea
-                                className="h-48"
-                                placeholder="Type your answer here... Be thorough and structured in your response."
-                                value={answer}
-                                onChange={(e) => setAnswer(e.target.value)}
-                                disabled={isSubmitting}
-                            />
+                            <div className="relative">
+                                <Textarea
+                                    className="h-48 pr-12"
+                                    placeholder="Type your answer here, or use the microphone to speak... Be thorough and structured in your response."
+                                    value={answer}
+                                    onChange={(e) => setAnswer(e.target.value)}
+                                    disabled={isSubmitting}
+                                />
+                                {isSpeechSupported && (
+                                    <div className="absolute right-3 top-3 flex flex-col gap-1">
+                                        <Button
+                                            type="button"
+                                            variant={isListening ? 'destructive' : 'secondary'}
+                                            size="icon"
+                                            onClick={toggleMic}
+                                            disabled={isSubmitting}
+                                            title={isListening ? 'Stop speaking' : 'Speak your answer'}
+                                            className="h-9 w-9 shrink-0"
+                                        >
+                                            {isListening ? (
+                                                <Square className="h-4 w-4" aria-hidden />
+                                            ) : (
+                                                <Mic className="h-4 w-4" aria-hidden />
+                                            )}
+                                        </Button>
+                                        {isListening && (
+                                            <span className="text-[10px] text-text-muted whitespace-nowrap">
+                                                Listening...
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {speechError && (
+                                <p className="text-sm text-semantic-error" role="alert">
+                                    {speechError}
+                                </p>
+                            )}
+                            {!isSpeechSupported && (
+                                <p className="text-xs text-text-muted">
+                                    Voice input is not supported in this browser. Use Chrome or Edge for speak-to-type.
+                                </p>
+                            )}
 
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-text-muted">
