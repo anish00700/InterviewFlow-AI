@@ -1,0 +1,23 @@
+services:
+  backend:
+    build: ./interviewflow-backend
+    ports:
+      - "5001:5001"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    env_file:
+      - ./interviewflow-backend/.env
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:5001/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./interviewflow-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy

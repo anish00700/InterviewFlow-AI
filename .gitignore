@@ -57,3 +57,12 @@ interviewflow-frontend/.vercel.json
 # Logs
 logs/
 *.log
+
+
+tmp
+Screenshots
+output
+
+
+
+k8s/backend-secrets.yaml

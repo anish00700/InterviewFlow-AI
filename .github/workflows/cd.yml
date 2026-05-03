@@ -1,0 +1,32 @@
+deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-and-push          # waits for images to be pushed
+    environment: production        # requires manual approval in GitHub
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Update backend image
+        run: |
+          kubectl set image deployment/backend \
+            backend=ghcr.io/${{ github.repository_owner }}/interviewflow-backend:${{ github.sha }} \
+            -n interviewflow
+
+      - name: Update frontend image
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=ghcr.io/${{ github.repository_owner }}/interviewflow-frontend:${{ github.sha }} \
+            -n interviewflow
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/backend -n interviewflow --timeout=120s
+          kubectl rollout status deployment/frontend -n interviewflow --timeout=120s
