@@ -54,21 +54,23 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ── 2. Deploy to Kubernetes ───────────────────────────────
+  # Runs on your local machine (self-hosted runner) where kind is already running.
+  # Register your machine: GitHub repo → Settings → Actions → Runners → New self-hosted runner
   deploy:
     name: Deploy to Kubernetes
-    runs-on: ubuntu-latest
-    needs: build-and-push        # only runs after images are successfully pushed
-    environment: production      # enables manual approval gate in GitHub
+    runs-on: self-hosted
+    needs: build-and-push
+    environment: production
 
     steps:
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Configure kubeconfig
+      # kubectl and kind are already installed on your machine — no setup needed.
+      # Images were just pushed to ghcr.io; load them into kind so k8s can use them.
+      - name: Load images into kind
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          docker pull ${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }}
+          docker pull ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+          kind load docker-image ${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} --name interviewflow
+          kind load docker-image ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }} --name interviewflow
 
       - name: Roll out backend
         run: |
